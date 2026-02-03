@@ -1,0 +1,189 @@
+.mobbin-reliability-badge {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    border: 1px solid #eee;
+    animation: contentFadeIn 0.15s ease-in;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Mini Badge for Multi-App View */
+.mobbin-reliability-minibadge {
+    position: absolute;
+    bottom: 0px;
+    right: 10px;
+    background: white;
+    padding: 4px 8px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 5;
+    /* Above card content (usually 0 or auto) but below Header (10) */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    border: 1px solid #f0f0f0;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: auto;
+    cursor: default;
+    animation: contentFadeIn 0.15s ease-in;
+}
+
+.mobbin-reliability-minibadge .score-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Tooltip for Mini Badge */
+.mobbin-reliability-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    width: max-content;
+    min-width: 160px;
+    z-index: 100;
+    border: 1px solid #eee;
+    text-align: left;
+    color: #333;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.mobbin-reliability-minibadge:hover .mobbin-reliability-tooltip,
+.mobbin-reliability-tooltip.expanded {
+    display: block;
+}
+
+.mobbin-reliability-tooltip .close-btn {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 14px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px;
+}
+
+.mobbin-reliability-tooltip .close-btn:hover {
+    color: #333;
+}
+
+.mobbin-reliability-tooltip a {
+    display: block;
+    color: #0066CC;
+    text-decoration: none;
+    font-size: 12px;
+    margin-top: 6px;
+    white-space: nowrap;
+}
+
+.mobbin-reliability-tooltip a:hover {
+    text-decoration: underline;
+}
+
+.mobbin-reliability-tooltip .tooltip-header {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: block;
+    border-bottom: 1px solid #f0f0f0;
+    padding-bottom: 6px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Skeleton Loader */
+@keyframes skeleton-pulse {
+    0% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0.6;
+    }
+}
+
+.mobbin-skeleton-pulse {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+    background: #afafaf;
+    border-radius: 4px;
+}
+
+.mobbin-skeleton-circle {
+    width: 50px;
+    height: 50px;
+}
+
+.mobbin-skeleton-line {
+    height: 12px;
+    margin-bottom: 6px;
+}
+
+.mobbin-skeleton-line.short {
+    width: 60px;
+}
+
+.mobbin-skeleton-line.long {
+    width: 100px;
+}
+
+.mobbin-skeleton-minibadge {
+    width: 32px;
+    height: 16px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+/* Content Transition */
+@keyframes contentFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.mobbin-content-fade {
+    animation: contentFadeIn 0.15s ease-in;
+}

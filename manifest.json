@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Mobbin Reliability Score",
+  "version": "1.0",
+  "description": "Adds a proven product track record reliability score to design screens on Mobbin.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "*://mobbin.com/*",
+    "*://play.google.com/*",
+    "*://apps.apple.com/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "action": {
+    "default_popup": "popup/popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://mobbin.com/*"
+      ],
+      "js": [
+        "utils/scoring.js",
+        "utils/scraper.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ]
+    }
+  ]
+}
