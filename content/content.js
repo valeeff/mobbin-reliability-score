@@ -684,6 +684,9 @@ async function fetchMobbinAppInfo(appUrl) {
         return { genre: null, appStoreUrl: null };
     }
 
+    const fullLogUrl = appUrl.startsWith('http') ? appUrl : `https://mobbin.com${appUrl}`;
+    console.log('Mobbin Reliability: Analyzing app page ->', fullLogUrl);
+
     // Cache the promise immediately (not the result) to deduplicate concurrent calls
     const fetchPromise = chrome.runtime.sendMessage({ type: 'FETCH_MOBBIN_GENRE', appUrl })
         .then(response => {

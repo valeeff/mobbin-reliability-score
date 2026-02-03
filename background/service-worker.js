@@ -684,6 +684,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             sendResponse({ genre: null, appStoreUrl: null, error: err.message });
         });
 
+        return true; // Keep channel open for async response
     }
 });
 
