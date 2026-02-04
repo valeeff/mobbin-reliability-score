@@ -756,7 +756,7 @@ async function fetchAggregatedIOSRatings(appId) {
     const aggKey = `apple_ratings_agg_v1:${appId}`;
     const cachedAgg = await getCache(aggKey);
     if (cachedAgg) {
-        console.log(`[Aggregation] Cache HIT for ${appId}`, cachedAgg);
+        console.log(`[Aggregation] Cache HIT for ${appId} (skipping fetch):`, cachedAgg);
         return cachedAgg;
     }
 
@@ -797,6 +797,7 @@ async function fetchAggregatedIOSRatings(appId) {
         if (!sfData) {
             // Network fetch
             const lookupUrl = `https://itunes.apple.com/lookup?id=${appId}&country=${country}`;
+            console.log(`[Aggregation] Fetching URL for ${appId} in ${country}: ${lookupUrl}`);
             try {
                 // Non-blocking fetch for unreliable regions
                 const controller = new AbortController();
@@ -814,7 +815,8 @@ async function fetchAggregatedIOSRatings(appId) {
                             averageUserRating: res.averageUserRating || 0,
                             // Store basic metadata from US/primary for content if needs update (optional)
                             trackName: res.trackName,
-                            primaryGenreName: res.primaryGenreName
+                            primaryGenreName: res.primaryGenreName,
+                            artistName: res.artistName
                         };
                         // Cache successful result
                         await setCache(sfKey, sfData, CACHE_TTL_DAYS_STOREFRONT);
@@ -889,6 +891,7 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
 // ✅ FETCH iOS DATA BY DIRECT URL - B. single app page (bypasses search)
 // Used when Mobbin provides the App Store URL directly in the page
 async function fetchIOSDataByUrl(appStoreUrl) {
+    console.log('[DEBUG] fetchIOSDataByUrl called with:', appStoreUrl);
     try {
         // Extract app ID from URL: https://apps.apple.com/us/app/app-name/id123456789
         const idMatch = appStoreUrl.match(/\/id(\d+)/);
@@ -908,7 +911,7 @@ async function fetchIOSDataByUrl(appStoreUrl) {
         const usKey = `apple_ratings:${appId}:us`;
         const usData = await getCache(usKey); // Likely cached by aggregation
 
-        if (usData && usData.trackName) {
+        if (usData && usData.trackName && usData.artistName) {
             metadata = usData;
         } else {
             // Fallback fetch just for metadata if US failed or wasn't first?
@@ -916,6 +919,7 @@ async function fetchIOSDataByUrl(appStoreUrl) {
             // Simplest: Just fetch US lookup again (cheap) or rely on what we have.
             // Let's do a quick US lookup if missing metadata.
             const lookupUrl = `https://itunes.apple.com/lookup?id=${appId}&country=us`;
+            console.log('[DEBUG] Metadata missing or incomplete (no artistName), fetching generic lookup:', lookupUrl);
             const resp = await fetch(lookupUrl);
             if (resp.ok) {
                 const d = await resp.json();
