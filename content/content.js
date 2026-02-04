@@ -233,13 +233,45 @@ async function injectFullBadge(appName) {
     const pageGenre = await getMobbinGenre();
     console.log('Mobbin Reliability: Genre wait finished, result:', pageGenre);
 
-    // 3. Fetch store data (tries direct iOS URL first, then search)
-    const tagline = getAppTagline();
-    const storeData = await fetchStoreDataForSingleApp(appName, pageGenre, tagline);
+    // 3. CHECK CACHE FIRST
+    const cacheKey = `score_${window.location.pathname}`; // Same strategy as multi-apps
+    console.log('[Single App] Checking cache for:', cacheKey);
+    let cachedData = null;
 
-    // 4. Calculate score if we have data
+    // Memory cache
+    if (appScoreCache.has(cacheKey)) {
+        console.log('[Single App] Cache hit (memory):', cacheKey);
+        cachedData = appScoreCache.get(cacheKey);
+    } else {
+        // Session storage
+        try {
+            const stored = await chrome.storage.session.get(cacheKey);
+            if (stored[cacheKey]) {
+                console.log('[Single App] Cache hit (session):', cacheKey);
+                cachedData = stored[cacheKey];
+                appScoreCache.set(cacheKey, cachedData); // Hydrate memory
+            }
+        } catch (e) { console.warn('Session storage read fail', e); }
+    }
+
+    let storeData = null;
     let data = null;
-    if (storeData) {
+
+    // If cache hit, use it directly
+    if (cachedData) {
+        console.log('[Single App] Using cached data:', cachedData);
+        data = cachedData;
+        // Construct faux storeData concept if needed purely for logic below, 
+        // but 'data' object is usually the Final calculated result.
+        // We can just skip to step 5 processing if we have the final object.
+    } else {
+        // 4. Fetch store data (tries direct iOS URL first, then search)
+        const tagline = getAppTagline();
+        storeData = await fetchStoreDataForSingleApp(appName, pageGenre, tagline);
+    }
+
+    // 4. Calculate score if we have data (and no cache hit yet)
+    if (!data && storeData) {
         const { androidData, iosData } = storeData;
         const hasAndroid = androidData && !androidData.error;
         const hasIOS = iosData && !iosData.error;
@@ -254,8 +286,18 @@ async function injectFullBadge(appName) {
                 growthMetrics,
                 downloadStats,
                 androidId: hasAndroid ? androidData.appId : null,
-                iosId: hasIOS ? iosData.appId : null
+                iosId: hasIOS ? iosData.appId : null,
+                iosData: iosData // Ensure full iOS data is preserved
             };
+
+            // SAVE TO CACHE
+            console.log('[Single App] Saving new result to cache:', cacheKey);
+            appScoreCache.set(cacheKey, data);
+            try {
+                await chrome.storage.session.set({ [cacheKey]: data });
+            } catch (e) {
+                console.warn('Failed to save to session storage', e);
+            }
         }
     }
 
@@ -559,11 +601,59 @@ async function findAppStoreUrlWithProof(appName) {
 }
 
 
+// ✅ EXTRACT App Store URL from Broad HTML (Fallback) - Ported from SW
+function extractAppStoreUrlFromHtml(html) {
+    if (!html) return null;
+
+    // Unified Regex Matching: Handles both standard and escaped JSON
+    const m = html.match(/"appStoreUrl"\s*:\s*"([^"]+)"/) ||
+        html.match(/\\"appStoreUrl\\"\s*:\s*\\"([^\\"]+)\\"/);
+
+    if (m && m[1]) {
+        // Unescape JSON-encoded characters
+        const url = m[1]
+            .replace(/\\u0026/g, '&')
+            .replace(/\\\//g, '/')   // Fixes \/ -> /
+            .replace(/\\\\/g, '\\'); // Fixes \\ -> \
+
+        if (url.includes('apps.apple.com')) {
+            console.log('Mobbin Reliability [Single App]: Broad regex fallback found URL:', url);
+            return url;
+        }
+    }
+
+    // Fallback: Direct extraction from raw text
+    const idx = html.indexOf('apps.apple.com');
+    if (idx !== -1) {
+        // Look slightly behind for https:// or https:\/\/
+        const start = Math.max(0, idx - 12);
+        const end = Math.min(html.length, idx + 250);
+        const chunk = html.slice(start, end);
+
+        const fallbackMatch = chunk.match(/(https?:\\?\/\\?\/apps\.apple\.com[^"'\s<>]*)/);
+        if (fallbackMatch) {
+            let rawUrl = fallbackMatch[1];
+            const cleanUrl = rawUrl.replace(/\\\//g, '/');
+            console.log('Mobbin Reliability [Single App]: Broad regex fallback (raw text) found URL:', cleanUrl);
+            return cleanUrl;
+        }
+    }
+
+    return null;
+}
+
 // ✅ FETCH STORE DATA FOR SINGLE APP - B. single app page
-// Tries direct iOS URL first (from script), then falls back to search
+// Tries direct iOS URL first (script -> html fallback), then falls back to search
 async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null) {
     // 1. Try to get iOS App Store URL directly from script (fast path) with retry/proof logic
-    const directIosUrl = await findAppStoreUrlWithProof(appName);
+    let directIosUrl = await findAppStoreUrlWithProof(appName);
+
+    // 2. Fallback: Broad HTML Regex Search if script proof failed
+    if (!directIosUrl) {
+        console.log('Mobbin Reliability [Single App]: "With Proof" extraction failed. Trying broad HTML search...');
+        directIosUrl = extractAppStoreUrlFromHtml(document.documentElement.outerHTML);
+    }
+
     let iosDataFromUrl = null;
 
     if (directIosUrl) {
@@ -582,7 +672,7 @@ async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null)
         }
     }
 
-    // 2. Fetch Android data (always via search) and iOS if not already found
+    // 3. Fetch Android data (always via search) and iOS if not already found
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_DATA',
         appName: appName,
@@ -601,7 +691,7 @@ async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null)
     const hasIOS = iosData && !iosData.error;
 
     if (!hasAndroid && !hasIOS) {
-        appScoreCache.set(appName, null);
+        // appScoreCache.set(appName, null); // Don't use appName as key, user URL based key in caller
         return null;
     }
 
