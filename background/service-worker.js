@@ -375,14 +375,29 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
             console.log(`Android: Candidate ${appId} description score: ${descScore.toFixed(2)}, developer: "${actualDeveloper}" (score: ${devScore.toFixed(2)})`);
 
             // Parse downloads (still from HTML as not in JSON)
+            console.log(`Android: Candidate ${appId} - Attempting regex match for downloads...`);
             let minInstalls = 0;
-            const downloadsTextMatch = detailsHtml.match(/([0-9,.]+[MkK]?)\+\s*Downloads/i) || detailsHtml.match(/([0-9,.]+[MkK]?)\+\s*downloads/);
-            if (downloadsTextMatch) {
-                minInstalls = downloadsTextMatch[1];
+
+            // Regex strategies (ordered by reliability)
+            const downloadPatterns = [
+                /([0-9,.]+[MkK]?)\+\s*Downloads/i,      // "10M+ Downloads" (Classic text)
+                /([0-9,.]+[MkK]?)\+\s*downloads/i,      // "10M+ downloads" (Lowercase)
+                /"([0-9]{1,3}(?:,[0-9]{3})*\+)"/,       // "10,000,000+" (JSON string with commas)
+                /"([0-9,.]+[MkB]\+)"/                   // "5B+" or "10M+" (JSON string with suffix)
+            ];
+
+            for (const pattern of downloadPatterns) {
+                const match = detailsHtml.match(pattern);
+                if (match) {
+                    minInstalls = match[1];
+                    console.log(`Android: Candidate ${appId} - Extracted downloads badge (min tier): "${minInstalls}" using pattern: ${pattern}`);
+                    break;
+                }
             }
 
-            // Parse rating count from JSON "ratingCount":"34977374"
-            let ratings = 0;
+            if (!minInstalls) {
+                console.log(`Android: Candidate ${appId} - FAILED to extract downloads badge. No regex matched.`);
+            }
             const ratingCountMatch = detailsHtml.match(/"ratingCount":"(\d+)"/);
             if (ratingCountMatch) {
                 ratings = parseInt(ratingCountMatch[1], 10);

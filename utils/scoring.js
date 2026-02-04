@@ -4,47 +4,77 @@
 
 // Base multipliers (used for Android at 1.0x, iOS at 0.75x)
 const BASE_MULTIPLIERS = {
-    // Low stakes - Entertainment/Leisure (70-140)
-    'Game': 70,
-    'Entertainment': 85,
-    'Social Networking': 100,
-    'Music & Audio': 110,
-    'Sports': 115,
-    'Photo & Video': 125,
-    'Lifestyle': 140,
+    // Low stakes - Entertainment/Leisure (40–105)
+    'Game': 60,              // avg(40–80)
+    'Entertainment': 68,     // avg(45–90)
+    'Social Networking': 75,// avg(50–100)
+    'Music & Audio': 75,    // avg(50–100)
+    'Sports': 70,           // close to Lifestyle band
+    'Photo & Video': 75,    // avg(50–100)
+    'Lifestyle': 80,        // avg(55–105)
 
-    // Medium stakes - Transactional/General (160-230)
-    'Shopping': 160,
-    'Travel': 170,
-    'Food & Drink': 170,
-    'Education': 200,
-    'Reference': 200,
-    'Collaboration': 230,
-    'Graphics & Design': 220,
+    // Medium stakes - Transactional/General (50–105)
+    'Shopping': 70,         // avg(50–90)
+    'Travel': 72,           // avg(50–95)
+    'Food & Drink': 72,     // avg(50–95)
+    'Education': 80,        // avg(55–105)
+    'Reference': 80,        // avg(55–105)
+    'Collaboration': 80,    // avg(55–105)
+    'Graphics & Design': 80,// avg(55–105)
 
-    // High stakes - Professional/Business (190-330)
-    'Communication': 200,
-    'Productivity': 240,
-    'Business': 260,
-    'Developer Tools': 300,
-    'Jobs & Recruitment': 260,
-    'Maps & Navigation': 210,
-    'AI': 190,
-    'CRM': 330,
-    'Real Estate': 260,
+    // High stakes - Professional/Business (55–125)
+    'Communication': 80,    // avg(55–105)
+    'Productivity': 85,     // avg(60–110)
+    'Business': 88,         // avg(60–115)
+    'Developer Tools': 90,  // avg(60–120)
+    'Jobs & Recruitment': 88,// avg(60–115)
+    'Maps & Navigation': 78,// avg(55–100)
+    'AI': 90,               // avg(60–120)
+    'CRM': 95,              // avg(65–125)
+    'Real Estate': 88,      // avg(60–115)
 
-    // Very high stakes - Financial/Safety-critical (190-380)
-    'Utilities': 230,
-    'Finance': 230,
-    'News': 190,
-    'Crypto & Web3': 320,
-    'Medical': 380,
-    'Health': 340
+    // Very high stakes - Financial/Safety-critical (55–150)
+    'Utilities': 78,        // avg(55–100)
+    'Finance': 90,          // avg(60–120)
+    'News': 78,             // avg(55–100)
+    'Crypto & Web3': 98,    // avg(65–130)
+    'Medical': 105,         // avg(70–140)
+    'Health': 113           // avg(75–150)
 };
 
 // Store-specific defaults
-const DEFAULT_IOS = 150;
-const DEFAULT_ANDROID = 220;
+const DEFAULT_IOS = 15;
+const DEFAULT_ANDROID = 22;
+
+// Google Play Store Tiers
+const GOOGLE_PLAY_TIERS = [
+    100,
+    500,
+    1000,
+    5000,
+    10000,
+    50000,
+    100000,
+    500000,
+    1000000,
+    5000000,
+    10000000,
+    50000000,
+    100000000,
+    500000000,
+    1000000000
+];
+
+function getNextTier(minInstalls) {
+    if (!minInstalls) return Infinity;
+    // Find the current tier index
+    // We assume minInstalls is exactly one of the tiers or slightly higher (rare)
+    // We want the strictly next tier.
+    for (const tier of GOOGLE_PLAY_TIERS) {
+        if (tier > minInstalls) return tier;
+    }
+    return Infinity; // Already at top tier
+}
 
 function cleanNum(value) {
     if (!value) return 0;
@@ -123,7 +153,24 @@ function calculateTotalDownloads(androidData, iosData, mobbinGenre) {
 
     const aMult = getMultiplier(genreForMultiplier, 'android');
     const aEstimate = aRatings * aMult;
-    const finalAndroid = Math.max(aEstimate, aFloor);
+
+    // Android Clamping Logic
+    // 1. Min: The badge value (aFloor)
+    // 2. Max: The start of the next tier
+    const aNextTier = getNextTier(aFloor);
+
+    let finalAndroid = aEstimate;
+
+    // Rule 1: If Estimation < Min -> use Min
+    if (finalAndroid < aFloor) {
+        finalAndroid = aFloor;
+    }
+    // Rule 2: If Estimation >= Max -> use Max - 1,000
+    // (Ensure we don't go below aFloor if the range is weirdly tight, though 1k gap is safe for all >1k tiers)
+    else if (aNextTier !== Infinity && finalAndroid >= aNextTier) {
+        const capped = aNextTier - 1000;
+        finalAndroid = Math.max(aFloor, capped);
+    }
 
     const iMult = getMultiplier(genreForMultiplier, 'ios');
     const finalIOS = iRatings * iMult;
