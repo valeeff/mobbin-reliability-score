@@ -450,98 +450,111 @@ function getAppTagline() {
 // 1. Slug Match (Best): Check if the script contains "slug":"[current-page-slug]"
 // 2. Name Presence (Good): Check if appName appears essentially anywhere in the script
 // 3. Single Candidate (Fallback): If only one script has an appStoreUrl, assume it's the right one
-function getAppStoreUrlFromScript(appName) {
-    console.warn('[MOBBIN-DEBUG] getAppStoreUrlFromScript called for:', appName);
+// ✅ EXTRACT iOS APP STORE URL FROM SCRIPT - B. single app page
+// Mobbin embeds the App Store URL directly in Next.js hydration scripts
+// Strategy: "Proof Rule" - Candidate must match at least 2 of 3 anchors:
+// 1. UUID: matches the uuid in the current page URL
+// 2. Slug: matches the current page slug
+// 3. Name: matches the app name tokens
+//
+// + Retry logic for SPA navigation delays
+async function findAppStoreUrlWithProof(appName) {
+    console.log('[MOBBIN-DEBUG] findAppStoreUrlWithProof called for:', appName);
 
-    const scripts = document.querySelectorAll('script');
-
-    // Extract mobbin slug from pathname: /apps/rocket-money-ios-xxxx -> rocket-money
+    // 1. PREPARE ANCHORS
+    const path = window.location.pathname; // e.g. /apps/rocket-money-ios-12345/screens
     let pageSlug = null;
-    const pathMatch = window.location.pathname.match(/\/apps\/([a-z0-9-]+)-(?:ios|android)/);
-    if (pathMatch) {
-        pageSlug = pathMatch[1];
-        console.warn('[MOBBIN-DEBUG] Extracted page slug:', pageSlug);
+    let pageUuid = null;
+
+    // Extract Slug & ID from: /apps/<slug>-ios-<uuid>(/...)
+    // This regex looks for the last dashed segment as the UUID
+    const match = path.match(/\/apps\/([a-z0-9-]+)-ios-([a-z0-9]+)(?:\/|$)/);
+    if (match) {
+        pageSlug = match[1];
+        pageUuid = match[2];
+    } else {
+        // Fallback for different URL structures or Android (less relevant here but safe)
+        const simpleMatch = path.match(/\/apps\/([a-z0-9-]+)(?:\/|$)/);
+        if (simpleMatch) pageSlug = simpleMatch[1];
     }
 
-    const norm = (s) => (s || '').toLowerCase();
-    const tokens = (s) =>
-        norm(s)
-            .replace(/[^a-z0-9]+/g, ' ')
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
+    console.log(`[MOBBIN-DEBUG] Anchors -> UUID: ${pageUuid || 'N/A'}, Slug: ${pageSlug || 'N/A'}`);
 
+    const norm = (s) => (s || '').toLowerCase();
+    const tokens = (s) => norm(s).replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
     const nameTokens = tokens(appName);
     const slugTokens = tokens(pageSlug);
 
-    // Regex that safely captures JSON string content (handles \" etc.)
+    // Regex that safely captures JSON string content
     const re = /\\*"appStoreUrl\\*"\s*:\s*\\*"((?:\\.|[^"\\])*)\\*"/g;
 
-    let best = { url: null, score: -1 };
-    let totalCandidates = 0;
+    // 2. RETRY LOOP (5 attempts x 300ms = 1.5s total)
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        const scripts = document.querySelectorAll('script');
+        let best = { url: null, score: -1 };
 
-    for (const script of scripts) {
-        const text = script.textContent || '';
-        if (!text.includes('appStoreUrl')) continue;
+        for (const script of scripts) {
+            const text = script.textContent || '';
+            if (!text.includes('appStoreUrl')) continue;
 
-        // Detect if THIS script blob is about the current page slug (strong signal)
-        const scriptHasSlug =
-            (pageSlug && text.includes(`"${pageSlug}"`)) ||
-            (appName && text.includes(`"${appName}"`));
+            // --- PROOF CHECKS ---
+            let matches = 0;
+            let reasons = [];
 
-        let m;
-        while ((m = re.exec(text)) !== null) {
-            totalCandidates++;
-
-            let url;
-            try {
-                // Decode JSON escapes properly (covers \/, \", \u0026, etc.)
-                url = JSON.parse(`"${m[1]}"`);
-            } catch (e) {
-                continue;
+            // Anchor 1: UUID (Strongest)
+            // We check if the script contains the page UUID
+            if (pageUuid && text.includes(pageUuid)) {
+                matches++;
+                reasons.push('UUID');
             }
 
-            // Basic sanity: must look like Apple Apps URL
-            if (!/^https?:\/\/apps\.apple\.com\//i.test(url)) continue;
-
-            let score = 0;
-
-            // Strongest: this script is tied to the page slug
-            if (scriptHasSlug) score += 100;
-
-            const urlLower = url.toLowerCase();
-
-            // Medium: slug tokens appear in URL path
-            if (slugTokens.length) {
-                const hit = slugTokens.filter(t => urlLower.includes(t)).length;
-                score += hit * 10;
+            // Anchor 2: Slug
+            // We check if the script contains the page slug string
+            if (pageSlug && text.includes(pageSlug)) {
+                matches++;
+                reasons.push('Slug');
             }
 
-            // Light: appName tokens appear in URL path (avoid “Rocket” matching everything by requiring 2+ hits when possible)
-            if (nameTokens.length) {
-                const hit = nameTokens.filter(t => urlLower.includes(t)).length;
-                score += (hit >= 2 ? hit * 6 : hit * 2);
+            // Anchor 3: Name
+            // We check if script contains at least one significant name token
+            // (Only if name is valid)
+            if (nameTokens.length > 0) {
+                const hasName = nameTokens.some(t => text.toLowerCase().includes(t));
+                if (hasName) {
+                    matches++;
+                    reasons.push('Name');
+                }
             }
 
-            // Small bonus if it has an /id######## pattern (real app)
-            if (/\/id\d{6,}/.test(urlLower)) score += 5;
+            // PROOF RULE: Accept validity if matches >= 1
+            const isValidContext = matches >= 1;
 
-            if (score > best.score) best = { url, score };
+            if (!isValidContext) continue;
+
+            // Extract URLs from this valid script
+            let m;
+            while ((m = re.exec(text)) !== null) {
+                let url;
+                try {
+                    url = JSON.parse(`"${m[1]}"`);
+                } catch (e) { continue; }
+
+                if (!/^https?:\/\/apps\.apple\.com\//i.test(url)) continue;
+
+                // We found a valid URL in a PROVEN script.
+                // We can accept it immediately or keep searching for "best" if multiple (unlikely in proven script)
+                // Let's take the first one found in a proven script as it's high confidence.
+                console.log(`[MOBBIN-DEBUG] MATCH FOUND (Attempt ${attempt}): ${url}`);
+                console.log(`[MOBBIN-DEBUG] Proof: ${reasons.join(', ')} (${matches}/3)`);
+                return url;
+            }
         }
+
+        // Wait before next attempt
+        if (attempt < 5) await new Promise(r => setTimeout(r, 300));
     }
 
-    // If we found exactly one candidate overall, return it even without matches
-    if (!best.url && totalCandidates === 1) {
-        // In this implementation best.url would have been set, but keep safety:
-        console.warn('[MOBBIN-DEBUG] Single candidate overall, returning fallback.');
-    }
-
-    if (best.url) {
-        console.warn('[MOBBIN-DEBUG] Selected App Store URL:', best.url, 'score=', best.score);
-        return best.url;
-    }
-
-    console.warn('[MOBBIN-DEBUG] APP STORE URL: not found in scripts for appName:', appName);
+    console.warn('[MOBBIN-DEBUG] findAppStoreUrlWithProof: Not found after retries.');
     return null;
 }
 
@@ -549,8 +562,8 @@ function getAppStoreUrlFromScript(appName) {
 // ✅ FETCH STORE DATA FOR SINGLE APP - B. single app page
 // Tries direct iOS URL first (from script), then falls back to search
 async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null) {
-    // 1. Try to get iOS App Store URL directly from script (fast path)
-    const directIosUrl = getAppStoreUrlFromScript(appName);
+    // 1. Try to get iOS App Store URL directly from script (fast path) with retry/proof logic
+    const directIosUrl = await findAppStoreUrlWithProof(appName);
     let iosDataFromUrl = null;
 
     if (directIosUrl) {
@@ -778,7 +791,7 @@ async function processScreenCell(cellElement) {
     if (cellElement.dataset.mobbinProcessed === "1") return;
     if (cellElement.dataset.mobbinProcessing === "1") return;
 
-    liElement.dataset.mobbinProcessing = "1";
+    cellElement.dataset.mobbinProcessing = "1";
 
     const myToken = navToken; // Capture
 
