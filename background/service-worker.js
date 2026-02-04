@@ -845,6 +845,7 @@ async function fetchAggregatedIOSRatings(appId) {
 
         // Process Data
         if (sfData) {
+            console.log(`iOS Data: Country ${country}, Count ${sfData.userRatingCount}`);
             processedCount++;
             if (sfData.userRatingCount > 0) {
                 usedStorefronts.push(country);

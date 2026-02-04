@@ -200,7 +200,17 @@ function linearRegressionSlope(x, y) {
     }
     const denom = (n * sumXX - sumX * sumX);
     if (denom === 0) return 0;
-    return (n * sumXY - sumX * sumY) / denom;
+
+    const slope = (n * sumXY - sumX * sumY) / denom;
+    console.log('[Growth]', {
+        n,
+        sumX,
+        sumY,
+        sumXY,
+        sumXX,
+        slope
+    });
+    return slope;
 }
 
 function computeGrowthSlope(reviewDates) {

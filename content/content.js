@@ -233,45 +233,13 @@ async function injectFullBadge(appName) {
     const pageGenre = await getMobbinGenre();
     console.log('Mobbin Reliability: Genre wait finished, result:', pageGenre);
 
-    // 3. CHECK CACHE FIRST
-    const cacheKey = `score_${window.location.pathname}`; // Same strategy as multi-apps
-    console.log('[Single App] Checking cache for:', cacheKey);
-    let cachedData = null;
+    // 3. Fetch store data (tries direct iOS URL first, then search)
+    const tagline = getAppTagline();
+    const storeData = await fetchStoreDataForSingleApp(appName, pageGenre, tagline);
 
-    // Memory cache
-    if (appScoreCache.has(cacheKey)) {
-        console.log('[Single App] Cache hit (memory):', cacheKey);
-        cachedData = appScoreCache.get(cacheKey);
-    } else {
-        // Session storage
-        try {
-            const stored = await chrome.storage.session.get(cacheKey);
-            if (stored[cacheKey]) {
-                console.log('[Single App] Cache hit (session):', cacheKey);
-                cachedData = stored[cacheKey];
-                appScoreCache.set(cacheKey, cachedData); // Hydrate memory
-            }
-        } catch (e) { console.warn('Session storage read fail', e); }
-    }
-
-    let storeData = null;
+    // 4. Calculate score if we have data
     let data = null;
-
-    // If cache hit, use it directly
-    if (cachedData) {
-        console.log('[Single App] Using cached data:', cachedData);
-        data = cachedData;
-        // Construct faux storeData concept if needed purely for logic below, 
-        // but 'data' object is usually the Final calculated result.
-        // We can just skip to step 5 processing if we have the final object.
-    } else {
-        // 4. Fetch store data (tries direct iOS URL first, then search)
-        const tagline = getAppTagline();
-        storeData = await fetchStoreDataForSingleApp(appName, pageGenre, tagline);
-    }
-
-    // 4. Calculate score if we have data (and no cache hit yet)
-    if (!data && storeData) {
+    if (storeData) {
         const { androidData, iosData } = storeData;
         const hasAndroid = androidData && !androidData.error;
         const hasIOS = iosData && !iosData.error;
@@ -286,18 +254,8 @@ async function injectFullBadge(appName) {
                 growthMetrics,
                 downloadStats,
                 androidId: hasAndroid ? androidData.appId : null,
-                iosId: hasIOS ? iosData.appId : null,
-                iosData: iosData // Ensure full iOS data is preserved
+                iosId: hasIOS ? iosData.appId : null
             };
-
-            // SAVE TO CACHE
-            console.log('[Single App] Saving new result to cache:', cacheKey);
-            appScoreCache.set(cacheKey, data);
-            try {
-                await chrome.storage.session.set({ [cacheKey]: data });
-            } catch (e) {
-                console.warn('Failed to save to session storage', e);
-            }
         }
     }
 
@@ -500,164 +458,19 @@ function getAppTagline() {
 // 3. Name: matches the app name tokens
 //
 // + Retry logic for SPA navigation delays
-async function findAppStoreUrlWithProof(appName) {
-    console.log('[MOBBIN-DEBUG] findAppStoreUrlWithProof called for:', appName);
+// [Removed findAppStoreUrlWithProof - replaced by background fetch strategy]
 
-    // 1. PREPARE ANCHORS
-    const path = window.location.pathname; // e.g. /apps/rocket-money-ios-12345/screens
-    let pageSlug = null;
-    let pageUuid = null;
-
-    // Extract Slug & ID from: /apps/<slug>-ios-<uuid>(/...)
-    // This regex looks for the last dashed segment as the UUID
-    const match = path.match(/\/apps\/([a-z0-9-]+)-ios-([a-z0-9]+)(?:\/|$)/);
-    if (match) {
-        pageSlug = match[1];
-        pageUuid = match[2];
-    } else {
-        // Fallback for different URL structures or Android (less relevant here but safe)
-        const simpleMatch = path.match(/\/apps\/([a-z0-9-]+)(?:\/|$)/);
-        if (simpleMatch) pageSlug = simpleMatch[1];
-    }
-
-    console.log(`[MOBBIN-DEBUG] Anchors -> UUID: ${pageUuid || 'N/A'}, Slug: ${pageSlug || 'N/A'}`);
-
-    const norm = (s) => (s || '').toLowerCase();
-    const tokens = (s) => norm(s).replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
-    const nameTokens = tokens(appName);
-    const slugTokens = tokens(pageSlug);
-
-    // Regex that safely captures JSON string content
-    const re = /\\*"appStoreUrl\\*"\s*:\s*\\*"((?:\\.|[^"\\])*)\\*"/g;
-
-    // 2. RETRY LOOP (5 attempts x 300ms = 1.5s total)
-    for (let attempt = 1; attempt <= 5; attempt++) {
-        const scripts = document.querySelectorAll('script');
-        let best = { url: null, score: -1 };
-
-        for (const script of scripts) {
-            const text = script.textContent || '';
-            if (!text.includes('appStoreUrl')) continue;
-
-            // --- PROOF CHECKS ---
-            let matches = 0;
-            let reasons = [];
-
-            // Anchor 1: UUID (Strongest)
-            // We check if the script contains the page UUID
-            if (pageUuid && text.includes(pageUuid)) {
-                matches++;
-                reasons.push('UUID');
-            }
-
-            // Anchor 2: Slug
-            // We check if the script contains the page slug string
-            if (pageSlug && text.includes(pageSlug)) {
-                matches++;
-                reasons.push('Slug');
-            }
-
-            // Anchor 3: Name
-            // We check if script contains at least one significant name token
-            // (Only if name is valid)
-            if (nameTokens.length > 0) {
-                const hasName = nameTokens.some(t => text.toLowerCase().includes(t));
-                if (hasName) {
-                    matches++;
-                    reasons.push('Name');
-                }
-            }
-
-            // PROOF RULE: Accept validity if matches >= 1
-            const isValidContext = matches >= 1;
-
-            if (!isValidContext) continue;
-
-            // Extract URLs from this valid script
-            let m;
-            while ((m = re.exec(text)) !== null) {
-                let url;
-                try {
-                    url = JSON.parse(`"${m[1]}"`);
-                } catch (e) { continue; }
-
-                if (!/^https?:\/\/apps\.apple\.com\//i.test(url)) continue;
-
-                // We found a valid URL in a PROVEN script.
-                // We can accept it immediately or keep searching for "best" if multiple (unlikely in proven script)
-                // Let's take the first one found in a proven script as it's high confidence.
-                console.log(`[MOBBIN-DEBUG] MATCH FOUND (Attempt ${attempt}): ${url}`);
-                console.log(`[MOBBIN-DEBUG] Proof: ${reasons.join(', ')} (${matches}/3)`);
-                return url;
-            }
-        }
-
-        // Wait before next attempt
-        if (attempt < 5) await new Promise(r => setTimeout(r, 300));
-    }
-
-    console.warn('[MOBBIN-DEBUG] findAppStoreUrlWithProof: Not found after retries.');
-    return null;
-}
-
-
-// ✅ EXTRACT App Store URL from Broad HTML (Fallback) - Ported from SW
-function extractAppStoreUrlFromHtml(html) {
-    if (!html) return null;
-
-    // Unified Regex Matching: Handles both standard and escaped JSON
-    const m = html.match(/"appStoreUrl"\s*:\s*"([^"]+)"/) ||
-        html.match(/\\"appStoreUrl\\"\s*:\s*\\"([^\\"]+)\\"/);
-
-    if (m && m[1]) {
-        // Unescape JSON-encoded characters
-        const url = m[1]
-            .replace(/\\u0026/g, '&')
-            .replace(/\\\//g, '/')   // Fixes \/ -> /
-            .replace(/\\\\/g, '\\'); // Fixes \\ -> \
-
-        if (url.includes('apps.apple.com')) {
-            console.log('Mobbin Reliability [Single App]: Broad regex fallback found URL:', url);
-            return url;
-        }
-    }
-
-    // Fallback: Direct extraction from raw text
-    const idx = html.indexOf('apps.apple.com');
-    if (idx !== -1) {
-        // Look slightly behind for https:// or https:\/\/
-        const start = Math.max(0, idx - 12);
-        const end = Math.min(html.length, idx + 250);
-        const chunk = html.slice(start, end);
-
-        const fallbackMatch = chunk.match(/(https?:\\?\/\\?\/apps\.apple\.com[^"'\s<>]*)/);
-        if (fallbackMatch) {
-            let rawUrl = fallbackMatch[1];
-            const cleanUrl = rawUrl.replace(/\\\//g, '/');
-            console.log('Mobbin Reliability [Single App]: Broad regex fallback (raw text) found URL:', cleanUrl);
-            return cleanUrl;
-        }
-    }
-
-    return null;
-}
 
 // ✅ FETCH STORE DATA FOR SINGLE APP - B. single app page
-// Tries direct iOS URL first (script -> html fallback), then falls back to search
+// Tries direct iOS URL first (from script), then falls back to search
 async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null) {
-    // 1. Try to get iOS App Store URL directly from script (fast path) with retry/proof logic
-    let directIosUrl = await findAppStoreUrlWithProof(appName);
-
-    // 2. Fallback: Broad HTML Regex Search if script proof failed
-    if (!directIosUrl) {
-        console.log('Mobbin Reliability [Single App]: "With Proof" extraction failed. Trying broad HTML search...');
-        directIosUrl = extractAppStoreUrlFromHtml(document.documentElement.outerHTML);
-    }
-
+    // 1. Fetch App Store URL via background fetch (consistent with Multi-App)
+    // This fetches the page HTML from the background and extracts the URL using reliable regex
+    const { appStoreUrl: directIosUrl } = await fetchMobbinAppInfo(window.location.href);
     let iosDataFromUrl = null;
 
     if (directIosUrl) {
-        console.log('Mobbin Reliability: Using direct iOS URL:', directIosUrl);
+        console.log('Mobbin Reliability (Single App): Using direct iOS URL from background fetch:', directIosUrl);
         try {
             const response = await chrome.runtime.sendMessage({
                 type: 'FETCH_IOS_BY_URL',
@@ -672,7 +485,7 @@ async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null)
         }
     }
 
-    // 3. Fetch Android data (always via search) and iOS if not already found
+    // 2. Fetch Android data (always via search) and iOS if not already found
     const response = await chrome.runtime.sendMessage({
         type: 'FETCH_DATA',
         appName: appName,
@@ -691,7 +504,7 @@ async function fetchStoreDataForSingleApp(appName, genre = null, tagline = null)
     const hasIOS = iosData && !iosData.error;
 
     if (!hasAndroid && !hasIOS) {
-        // appScoreCache.set(appName, null); // Don't use appName as key, user URL based key in caller
+        appScoreCache.set(appName, null);
         return null;
     }
 
