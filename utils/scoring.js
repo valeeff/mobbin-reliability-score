@@ -215,44 +215,68 @@ function linearRegressionSlope(x, y, appName) {
 }
 
 function computeGrowthSlope(reviewDates, appName) {
-    if (!Array.isArray(reviewDates) || reviewDates.length < 15) return 0;
+    if (!Array.isArray(reviewDates) || reviewDates.length === 0) return null;
 
-    const dates = reviewDates
+    let dates = reviewDates
         .map(d => new Date(d))
         .filter(d => !isNaN(d.getTime()))
         .sort((a, b) => a - b);
 
-    if (dates.length < 15) return 0;
+    if (dates.length === 0) return null;
 
-    // Weekly bins: key = week index since first review
-    const start = dates[0];
+    // 1. Cap to most recent 365 days (relative to the newest review)
+    const maxTime = dates[dates.length - 1].getTime();
+    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+    const minTime = maxTime - oneYearMs;
+
+    dates = dates.filter(d => d.getTime() >= minTime);
+
+    if (dates.length === 0) return null; // Should not happen given logic above, but safe guard
+
+    // 2. Daily bins (UTC calendar days)
+    // Key = day index relative to the first date in the (filtered) series
+    const dayMs = 86400000;
+    const startDayEpoch = Math.floor(dates[0].getTime() / dayMs);
     const bins = new Map();
+
     for (const d of dates) {
-        const week = Math.floor((d - start) / (1000 * 60 * 60 * 24 * 7));
-        bins.set(week, (bins.get(week) || 0) + 1);
+        const currentDayEpoch = Math.floor(d.getTime() / dayMs);
+        const dayIndex = currentDayEpoch - startDayEpoch;
+        bins.set(dayIndex, (bins.get(dayIndex) || 0) + 1);
     }
 
-    // Build ordered, dense series (fill missing weeks with 0)
-    const weeks = Array.from(bins.keys()).sort((a, b) => a - b);
-    const minW = weeks[0];
-    const maxW = weeks[weeks.length - 1];
+    // Dead code check (bins.size === 0) removed
 
-    let counts = [];
-    for (let w = minW; w <= maxW; w++) counts.push(bins.get(w) || 0);
+    // Build ordered, dense series (fill missing days with 0)
+    // No trimming, no windowing other than the 365d cap above
+    const days = Array.from(bins.keys()).sort((a, b) => a - b);
+    // minD (days[0]) is always 0 because startDayEpoch is derived from the first date
+    const maxD = days[days.length - 1];
 
-    // Drop launch + partial last week if enough history
-    if (counts.length >= 6) counts = counts.slice(1, -1);
+    const counts = [];
+    for (let d = 0; d <= maxD; d++) {
+        counts.push(bins.get(d) || 0);
+    }
 
-    // Focus on recent momentum (last 12 full weeks)
-    const WINDOW = 12;
-    if (counts.length > WINDOW) counts = counts.slice(-WINDOW);
-
-    if (counts.length < 4) return 0;
-
-    const x = counts.map((_, i) => i);
+    // Regression: x = weeks (so slope is "per week"), y = log(1 + count)
+    const x = counts.map((_, i) => i / 7);
     const yLog = counts.map(c => Math.log1p(c));
 
-    return linearRegressionSlope(x, yLog, appName);
+    // linearRegressionSlope handles n < 2 by returning 0 (neutral)
+    const slope = linearRegressionSlope(x, yLog, appName);
+
+    // [User Request] Log for each app
+    const newestStr = new Date(maxTime).toISOString().split('T')[0];
+    const oldestStr = new Date(minTime).toISOString().split('T')[0];
+    const daysWindow = 365;
+
+    console.log(`[Growth Metric Log] App: "${appName}"
+    - Reviews Found (Total passed): ${reviewDates.length}
+    - Reviews Used (Last 365d): ${dates.length}
+    - Time Window: ${daysWindow} days (${oldestStr} to ${newestStr})
+    - Final Growth Score (Slope): ${slope.toFixed(5)}`);
+
+    return slope;
 }
 
 
@@ -348,8 +372,15 @@ function calculateGrowthMetrics(reviewDates, appName) {
 
 function calculateReliabilityScore(totalDownloads, growthSlope) {
     const dScore = downloadsToScore(totalDownloads);
-    const gScore = slopeToGrowthScore(growthSlope);
-    const finalRaw = getFinalScore(dScore, gScore); // 0 to 5
+    let finalRaw;
+
+    if (growthSlope === null) {
+        // No growth data (e.g. Android only) -> use pure downloads score
+        finalRaw = dScore;
+    } else {
+        const gScore = slopeToGrowthScore(growthSlope);
+        finalRaw = getFinalScore(dScore, gScore); // 0 to 5
+    }
 
     const score100 = Math.round(finalRaw * 20);
 

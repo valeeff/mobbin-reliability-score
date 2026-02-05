@@ -471,19 +471,8 @@ async function fetchIOSData(appName, mobbinCategory = null, mobbinTagline = null
 
                 const ratings = app.userRatingCount || 0;
 
-                // Reviews RSS
-                const rssUrl = `https://itunes.apple.com/us/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
-                let reviewsDates = [];
-                try {
-                    const rssResp = await fetch(rssUrl);
-                    const rssData = await rssResp.json();
-                    if (rssData.feed && rssData.feed.entry) {
-                        const entries = Array.isArray(rssData.feed.entry) ? rssData.feed.entry : [rssData.feed.entry];
-                        reviewsDates = entries.map(e => e.updated.label);
-                    }
-                } catch (e) {
-                    console.warn('Failed to fetch iOS reviews RSS', e);
-                }
+                // Reviews RSS (Aggregated Growth)
+                const reviewsDates = await fetchAggregatedReviews(appId);
 
                 validCandidates.push({
                     ratings: ratings,
@@ -904,6 +893,64 @@ chrome.webNavigation.onHistoryStateUpdated.addListener((details) => {
 });
 
 
+// ✅ Apple Reviews Aggregation (Growth Metrics)
+// Fetches recent reviews from top markets to gauge global momentum
+async function fetchAggregatedReviews(appId) {
+    if (!appId) return [];
+
+    // Limit to top 5 markets to avoid rate limits/latency
+    // STOREFRONTS is sorted by priority in global scope
+    const TOP_MARKETS = STOREFRONTS; // Use ALL storefronts for max accuracy
+
+    // Helper for single RSS fetch
+    const fetchRSS = async (country) => {
+        const rssUrl = `https://itunes.apple.com/${country}/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
+        try {
+            const resp = await fetch(rssUrl);
+            if (!resp.ok) return [];
+            const data = await resp.json();
+            if (data.feed && data.feed.entry) {
+                // Entry can be object or array
+                const entries = Array.isArray(data.feed.entry) ? data.feed.entry : [data.feed.entry];
+
+                // Map to objects with ID for deduplication
+                return entries.map(e => ({
+                    id: e.id?.label, // Unique review ID
+                    date: e.updated?.label
+                })).filter(e => e.date); // Ensure date exists
+            }
+        } catch (e) {
+            // fast fail
+        }
+        return [];
+    };
+
+    console.log(`[Reviews] Fetching aggregated reviews for ${appId} from:`, TOP_MARKETS);
+
+    // Execute in parallel
+    const results = await Promise.all(TOP_MARKETS.map(country => fetchRSS(country)));
+
+    const allReviews = results.flat();
+
+    // Deduplicate by ID (cross-market pollination can happen)
+    const seenIds = new Set();
+    const uniqueDates = [];
+
+    for (const r of allReviews) {
+        if (r.id && !seenIds.has(r.id)) {
+            seenIds.add(r.id);
+            uniqueDates.push(r.date);
+        } else if (!r.id) {
+            // If no ID, just trust it (rare)
+            uniqueDates.push(r.date);
+        }
+    }
+
+    console.log(`[Reviews] Aggregated ${uniqueDates.length} unique reviews from ${TOP_MARKETS.length} markets.`);
+    return uniqueDates;
+}
+
+
 // ✅ FETCH iOS DATA BY DIRECT URL - B. single app page (bypasses search)
 // Used when Mobbin provides the App Store URL directly in the page
 async function fetchIOSDataByUrl(appStoreUrl) {
@@ -918,11 +965,10 @@ async function fetchIOSDataByUrl(appStoreUrl) {
 
         const appId = idMatch[1];
 
-        // Use Aggregation Logic
+        // Use Aggregation Logic for Ratings (Volume)
         const aggData = await fetchAggregatedIOSRatings(appId);
 
-        // We still need metadata (title, genre, icon etc.) - Fetch from US (or first available) for consistency
-        // Reuse us fetch if it's cached from aggregation loop, otherwise fetch fresh
+        // We still need metadata (title, genre, icon etc.) - Fetch from US (or first available)
         let metadata = null;
         const usKey = `apple_ratings:${appId}:us`;
         const usData = await getCache(usKey); // Likely cached by aggregation
@@ -930,10 +976,7 @@ async function fetchIOSDataByUrl(appStoreUrl) {
         if (usData && usData.trackName && usData.artistName) {
             metadata = usData;
         } else {
-            // Fallback fetch just for metadata if US failed or wasn't first?
-            // Or just use the first successful cache from aggregation?
-            // Simplest: Just fetch US lookup again (cheap) or rely on what we have.
-            // Let's do a quick US lookup if missing metadata.
+            // Fallback fetch just for metadata
             const lookupUrl = `https://itunes.apple.com/lookup?id=${appId}&country=us`;
             console.log('[DEBUG] Metadata missing or incomplete (no artistName), fetching generic lookup:', lookupUrl);
             const resp = await fetch(lookupUrl);
@@ -944,30 +987,18 @@ async function fetchIOSDataByUrl(appStoreUrl) {
         }
 
         if (!metadata) {
-            // If completely failed to get metadata but got ratings (rare), default
             metadata = { trackName: 'Unknown', primaryGenreName: 'Unknown', artistName: 'Unknown' };
         }
 
-        // Fetch reviews RSS for growth metrics (US store is standard for this proxy)
-        const rssUrl = `https://itunes.apple.com/us/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
-        let reviewsDates = [];
-        try {
-            const rssResp = await fetch(rssUrl);
-            const rssData = await rssResp.json();
-            if (rssData.feed && rssData.feed.entry) {
-                const entries = Array.isArray(rssData.feed.entry) ? rssData.feed.entry : [rssData.feed.entry];
-                reviewsDates = entries.map(e => e.updated.label);
-            }
-        } catch (e) {
-            console.warn('iOS (direct URL): Failed to fetch reviews RSS', e);
-        }
+        // Use Aggregation Logic for Reviews (Growth)
+        const reviewsDates = await fetchAggregatedReviews(appId);
 
         console.log(`iOS (direct URL): Found app "${metadata.trackName}" with Aggregated Ratings: ${aggData.apple_ratings_total_estimated}`);
 
         return {
             ratings: aggData.apple_ratings_total_estimated, // Use Aggregated Total
-            start_rating: aggData.apple_rating_weighted_avg, // Pass avg just in case (optional, schema check)
-            reviews_dates: reviewsDates,
+            start_rating: aggData.apple_rating_weighted_avg,
+            reviews_dates: reviewsDates, // Use Aggregated Dates
             appId: appId,
             category: metadata.primaryGenreName,
             title: metadata.trackName,
