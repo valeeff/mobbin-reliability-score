@@ -187,7 +187,7 @@ function calculateTotalDownloads(androidData, iosData, mobbinGenre) {
 // 2. GROWTH METRICS 
 // ==========================================
 
-function linearRegressionSlope(x, y) {
+function linearRegressionSlope(x, y, appName) {
     const n = x.length;
     if (n < 2) return 0;
 
@@ -203,6 +203,7 @@ function linearRegressionSlope(x, y) {
 
     const slope = (n * sumXY - sumX * sumY) / denom;
     console.log('[Growth]', {
+        appName,
         n,
         sumX,
         sumY,
@@ -213,7 +214,7 @@ function linearRegressionSlope(x, y) {
     return slope;
 }
 
-function computeGrowthSlope(reviewDates) {
+function computeGrowthSlope(reviewDates, appName) {
     if (!Array.isArray(reviewDates) || reviewDates.length < 15) return 0;
 
     const dates = reviewDates
@@ -251,7 +252,7 @@ function computeGrowthSlope(reviewDates) {
     const x = counts.map((_, i) => i);
     const yLog = counts.map(c => Math.log1p(c));
 
-    return linearRegressionSlope(x, yLog);
+    return linearRegressionSlope(x, yLog, appName);
 }
 
 
@@ -341,8 +342,8 @@ function getFinalScore(downloads, growth) {
 // 4. PUBLIC API ADAPTERS
 // ==========================================
 
-function calculateGrowthMetrics(reviewDates) {
-    return computeGrowthSlope(reviewDates);
+function calculateGrowthMetrics(reviewDates, appName) {
+    return computeGrowthSlope(reviewDates, appName);
 }
 
 function calculateReliabilityScore(totalDownloads, growthSlope) {

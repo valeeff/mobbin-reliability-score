@@ -172,7 +172,7 @@ async function fetchAndCalculateScore(appUrl, appName, genre = null, tagline = n
     // Calculate
     // We prioritize the genre passed in (scraped from the page)
     const downloadStats = calculateTotalDownloads(androidData, iosData, genre);
-    const growthMetrics = calculateGrowthMetrics(iosData.reviews_dates || []);
+    const growthMetrics = calculateGrowthMetrics(iosData.reviews_dates || [], appName);
     const scoreCard = calculateReliabilityScore(downloadStats.total, growthMetrics);
 
     const result = {
@@ -246,7 +246,7 @@ async function injectFullBadge(appName) {
 
         if (hasAndroid || hasIOS) {
             const downloadStats = calculateTotalDownloads(androidData, iosData, pageGenre);
-            const growthMetrics = calculateGrowthMetrics(iosData?.reviews_dates || []);
+            const growthMetrics = calculateGrowthMetrics(iosData?.reviews_dates || [], appName);
             const scoreCard = calculateReliabilityScore(downloadStats.total, growthMetrics);
 
             data = {
