@@ -295,7 +295,7 @@ async function injectFullBadge(appName) {
     badge.innerHTML = `
         <div class="mobbin-content-fade" style="display: flex; align-items: center; gap: 10px;">
             <div style="background: ${color}; color: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
-                ${scoreCard.score}<span style="font-size: 10px;">/100</span>
+                ${scoreCard.score}<span style="font-size: 10px;">/10</span>
             </div>
             <div>
                 <div style="font-weight: bold; font-size: 14px; color: #333;">${scoreCard.grade} Reliability</div>

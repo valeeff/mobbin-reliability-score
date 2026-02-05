@@ -382,15 +382,18 @@ function calculateReliabilityScore(totalDownloads, growthSlope) {
         finalRaw = getFinalScore(dScore, gScore); // 0 to 5
     }
 
-    const score100 = Math.round(finalRaw * 20);
+    const score10 = (finalRaw * 2).toFixed(1);
+
+    // Parse back to float for comparison
+    const scoreVal = parseFloat(score10);
 
     let grade = 'Low';
-    if (score100 >= 90) grade = 'Elite';
-    else if (score100 >= 70) grade = 'High';
-    else if (score100 >= 40) grade = 'Medium';
+    if (scoreVal >= 9.0) grade = 'Elite';
+    else if (scoreVal >= 7.0) grade = 'High';
+    else if (scoreVal >= 4.0) grade = 'Medium';
 
     return {
-        score: score100,
+        score: scoreVal === 10 ? '10' : score10,
         grade: grade
     };
 }
