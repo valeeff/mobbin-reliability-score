@@ -986,8 +986,20 @@ async function fetchIOSDataByUrl(appStoreUrl) {
             }
         }
 
+        // Check if we found it in other storefronts if US failed
+        if (!metadata && aggData.apple_storefronts_used && aggData.apple_storefronts_used.length > 0) {
+            const altCountry = aggData.apple_storefronts_used[0];
+            const altKey = `apple_ratings:${appId}:${altCountry}`;
+            const altData = await getCache(altKey);
+            if (altData && altData.trackName) {
+                console.log(`[iOS] Metadata not found in US, using ${altCountry} fallback for ${appId}`);
+                metadata = altData;
+            }
+        }
+
         if (!metadata) {
-            metadata = { trackName: 'Unknown', primaryGenreName: 'Unknown', artistName: 'Unknown' };
+            console.log(`iOS (direct URL): Metadata lookup failed for ${appId}. Treating as missing.`);
+            return { error: 'App not found on App Store (Metadata lookup failed)' };
         }
 
         // Use Aggregation Logic for Reviews (Growth)
