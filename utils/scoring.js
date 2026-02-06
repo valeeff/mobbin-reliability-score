@@ -237,10 +237,10 @@ function computeGrowthSlope(reviewDates, appName) {
     const dayMs = 86400000;
     const weekMs = dayMs * 7;
 
-    // We align bins relative to the START of the window (minTime)
-    // This ensures Week 0 is the oldest week, and Week 52 is the newest.
-    // X axis 0 -> Oldest, X axis 52 -> Newest
-    const startWeekEpoch = Math.floor(minTime / weekMs);
+    // We align bins relative to the FIRST review date in the window (dates[0])
+    // This ensures we measure trends only during the app's active history (within the last year)
+    // rather than punishing it for unrelated silence 10 months ago.
+    const startWeekEpoch = Math.floor(dates[0].getTime() / weekMs);
     const bins = new Map();
 
     for (const d of dates) {
@@ -251,14 +251,11 @@ function computeGrowthSlope(reviewDates, appName) {
         }
     }
 
-    // Determine the full range of weeks (0 to ~52)
-    // We use the full window length to ensure we capture "zero weeks" correctly for the timeline
-    const maxWeekIndex = Math.floor(maxTime / weekMs) - startWeekEpoch;
+    // Determine the range of weeks from First Review to Last Review
+    const maxWeekIndex = Math.floor(dates[dates.length - 1].getTime() / weekMs) - startWeekEpoch;
 
     const counts = [];
-    // Key change: We fill ALL weeks from 0 to maxWeekIndex.
-    // If a week has 0 reviews, it enters the regression as 0 (which becomes log(1)=0).
-    // This correctly penalizes periods of silence.
+    // Fill weeks from 0 to maxWeekIndex
     for (let w = 0; w <= maxWeekIndex; w++) {
         counts.push(bins.get(w) || 0);
     }
@@ -363,8 +360,8 @@ function getFinalScore(downloads, growth) {
     // Interpolate bottom->top between those two
     const result = R1 * (1 - yd) + R2 * yd;
 
-    // Optional: snap to nearest 0.5 like your table style
-    return Math.round(result * 2) / 2;
+    // Return exact interpolated value (0.0 to 5.0) for downstream mapping
+    return result;
 }
 
 
@@ -379,33 +376,40 @@ function calculateGrowthMetrics(reviewDates, appName) {
 
 function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unknown') {
     const dScore = downloadsToScore(totalDownloads);
-    let finalRaw;
+    let matrixScore;
     let gScore = null;
 
     if (growthSlope === null) {
         // No growth data (e.g. Android only) -> use pure downloads score
-        finalRaw = dScore;
+        // We use dScore (1-5) directly as base quality score
+        matrixScore = dScore;
     } else {
         gScore = slopeToGrowthScore(growthSlope);
-        finalRaw = getFinalScore(dScore, gScore); // 0 to 5
+        matrixScore = getFinalScore(dScore, gScore); // 0.0 to 5.0 (interpolated)
     }
 
-    const score100 = Math.round(finalRaw * 20);
+    // Map 0-5 Matrix Score to 2-10 Final Score
+    // Formula: Final = 2 + (Matrix * 1.6)
+    // Range 0->2.0, 5->10.0
+    const mappedScore = 2 + (matrixScore * 1.6);
+
+    // Snap to nearest 0.5
+    const finalScore = Math.round(mappedScore * 2) / 2;
 
     let grade = 'Low';
-    if (score100 >= 90) grade = 'Elite';
-    else if (score100 >= 70) grade = 'High';
-    else if (score100 >= 40) grade = 'Medium';
+    if (finalScore >= 9.0) grade = 'Elite';
+    else if (finalScore >= 7.5) grade = 'High';
+    else if (finalScore >= 5.0) grade = 'Medium';
 
     console.log(`[Reliability Score Log] App: "${appName}"
     - Downloads: ${totalDownloads} (Score: ${dScore})
     - Growth Slope: ${growthSlope === null ? 'N/A' : growthSlope.toFixed(5)} (Score: ${gScore === null ? 'N/A' : gScore})
-    - Matrix Logic: ${growthSlope === null ? 'Downloads Only' : `Matrix(${dScore}, ${gScore})`} -> ${finalRaw}
-    - Final Score: ${score100}
+    - Matrix Score (0-5): ${matrixScore.toFixed(2)}
+    - Mapped Score (2-10): ${mappedScore.toFixed(2)} -> Snapped: ${finalScore}
     - Grading: ${grade}`);
 
     return {
-        score: score100,
+        score: finalScore,
         grade: grade
     };
 }

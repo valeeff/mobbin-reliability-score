@@ -47,8 +47,8 @@ console.log('\n--- Testing Score ---');
 const scoreRes = calculateReliabilityScore(dlLarge.total, growthRes);
 console.log('Score Result (Large - >5M):', scoreRes);
 
-const scoreResMedium = calculateReliabilityScore(dlMedium.total, { trend_label: 'Stable', annual_run_rate: 100 });
+const scoreResMedium = calculateReliabilityScore(dlMedium.total, 0.05);
 console.log('Score Result (Medium - ~1.2M):', scoreResMedium);
 
-const scoreResSmall = calculateReliabilityScore(dlSmall.total, { trend_label: 'Stable', annual_run_rate: 100 });
+const scoreResSmall = calculateReliabilityScore(dlSmall.total, 0.005);
 console.log('Score Result (Small - ~10k):', scoreResSmall);
