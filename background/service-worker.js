@@ -757,7 +757,8 @@ async function fetchAggregatedIOSRatings(appId) {
     if (!appId) return { error: 'No App ID provided' };
 
     // 1. Check Aggregate Cache
-    const aggKey = `apple_ratings_agg_v1:${appId}`;
+    // Bumped to v2 to include breakdown field
+    const aggKey = `apple_ratings_agg_v2:${appId}`;
     const cachedAgg = await getCache(aggKey);
     if (cachedAgg) {
         console.log(`[Aggregation] Cache HIT for ${appId} (skipping fetch):`, cachedAgg);
@@ -769,6 +770,7 @@ async function fetchAggregatedIOSRatings(appId) {
     let totalRatings = 0;
     let weightedSum = 0;
     let usedStorefronts = [];
+    let ratingsBreakdown = []; // breakdown per country
     let processedCount = 0;
 
     // Track running totals for early stop logic
@@ -838,6 +840,7 @@ async function fetchAggregatedIOSRatings(appId) {
             processedCount++;
             if (sfData.userRatingCount > 0) {
                 usedStorefronts.push(country);
+                ratingsBreakdown.push({ country: country, count: sfData.userRatingCount });
                 totalRatings += sfData.userRatingCount;
                 weightedSum += (sfData.averageUserRating * sfData.userRatingCount);
                 history.push(sfData.userRatingCount);
@@ -855,6 +858,7 @@ async function fetchAggregatedIOSRatings(appId) {
 
     const result = {
         apple_ratings_total_estimated: totalRatings,
+        apple_ratings_breakdown: ratingsBreakdown, // Added breakdown
         apple_rating_weighted_avg: finalAvg,
         apple_storefronts_used: usedStorefronts
     };
