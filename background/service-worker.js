@@ -214,7 +214,7 @@ function isCategoryMatch(mobbinCat, storeCat, storeType = 'android') {
 function descriptionScore(mobbinTagline, storeDesc) {
     if (!mobbinTagline || !storeDesc) return 0;
 
-    const stopWords = new Set(['the', 'and', 'for', 'with', 'your', 'app', 'best', 'free', 'new', 'get', 'all']);
+    const stopWords = new Set(['the', 'you', 'and', 'for', 'with', 'your', 'app', 'best', 'free', 'new', 'get', 'all']);
     const mobbinWords = mobbinTagline.toLowerCase()
         .split(/\W+/)
         .filter(w => w.length > 2 && !stopWords.has(w));
@@ -238,7 +238,7 @@ function descriptionScore(mobbinTagline, storeDesc) {
 // Helper to extract key search terms from tagline
 function getTaglineKeywords(tagline, maxWords = 4) {
     if (!tagline) return '';
-    const stopWords = new Set(['the', 'and', 'for', 'with', 'your', 'app', 'best', 'free', 'new', 'get', 'all', 'powered', 'based']);
+    const stopWords = new Set(['the', 'you', 'and', 'for', 'with', 'your', 'app', 'best', 'free', 'new', 'get', 'all', 'powered', 'based']);
     const words = tagline.toLowerCase()
         .split(/\W+/)
         .filter(w => w.length > 2 && !stopWords.has(w));

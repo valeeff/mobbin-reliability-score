@@ -187,6 +187,7 @@ function calculateTotalDownloads(androidData, iosData, mobbinGenre) {
 // 2. GROWTH METRICS 
 // ==========================================
 
+
 function linearRegressionSlope(x, y, appName) {
     const n = x.length;
     if (n < 2) return 0;
@@ -214,8 +215,26 @@ function linearRegressionSlope(x, y, appName) {
     return slope;
 }
 
-function computeGrowthSlope(reviewDates, appName) {
-    if (!Array.isArray(reviewDates) || reviewDates.length === 0) return null;
+function computeGrowthSlope(reviewDates, appName, androidData = {}, iosData = {}) {
+    const iosVal = iosData.ratings || 'N/A';
+    const iosLinkVal = iosData.appStoreUrl || (iosData.appId ? `https://apps.apple.com/app/id${iosData.appId}` : 'N/A');
+    const androidVal = androidData.ratings || 'N/A';
+    const androidLinkVal = androidData.appId ? `https://play.google.com/store/apps/details?id=${androidData.appId}` : 'N/A';
+
+    console.log(`[Basic Info Log] App: "${appName}"
+    - ios: ${iosVal}
+    - ios link: ${iosLinkVal}
+    - android: ${androidVal}
+    - android link: ${androidLinkVal}`);
+
+    if (!Array.isArray(reviewDates) || reviewDates.length === 0) {
+        console.log(`[Growth Metric Log] App: "${appName}"
+    - Reviews Used (Last 365d): 0
+    - Time Window: 0 days
+    - Data Points (Weeks): 0
+    - Final Growth Score (Weekly Log Trend): N/A`);
+        return null;
+    }
 
     let dates = reviewDates
         .map(d => new Date(d))
@@ -370,8 +389,8 @@ function getFinalScore(downloads, growth) {
 // 4. PUBLIC API ADAPTERS
 // ==========================================
 
-function calculateGrowthMetrics(reviewDates, appName) {
-    return computeGrowthSlope(reviewDates, appName);
+function calculateGrowthMetrics(reviewDates, appName, androidData, iosData) {
+    return computeGrowthSlope(reviewDates, appName, androidData, iosData);
 }
 
 function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unknown') {
