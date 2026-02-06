@@ -233,48 +233,55 @@ function computeGrowthSlope(reviewDates, appName) {
 
     if (dates.length === 0) return null; // Should not happen given logic above, but safe guard
 
-    // 2. Daily bins (UTC calendar days)
-    // Key = day index relative to the first date in the (filtered) series
+    // 2. Weekly bins (Aggregated 7-day periods to reduce daily noise)
     const dayMs = 86400000;
-    const startDayEpoch = Math.floor(dates[0].getTime() / dayMs);
+    const weekMs = dayMs * 7;
+
+    // We align bins relative to the START of the window (minTime)
+    // This ensures Week 0 is the oldest week, and Week 52 is the newest.
+    // X axis 0 -> Oldest, X axis 52 -> Newest
+    const startWeekEpoch = Math.floor(minTime / weekMs);
     const bins = new Map();
 
     for (const d of dates) {
-        const currentDayEpoch = Math.floor(d.getTime() / dayMs);
-        const dayIndex = currentDayEpoch - startDayEpoch;
-        bins.set(dayIndex, (bins.get(dayIndex) || 0) + 1);
+        const currentWeekEpoch = Math.floor(d.getTime() / weekMs);
+        const weekIndex = currentWeekEpoch - startWeekEpoch;
+        if (weekIndex >= 0) { // Safety check
+            bins.set(weekIndex, (bins.get(weekIndex) || 0) + 1);
+        }
     }
 
-    // Dead code check (bins.size === 0) removed
-
-    // Build ordered, dense series (fill missing days with 0)
-    // No trimming, no windowing other than the 365d cap above
-    const days = Array.from(bins.keys()).sort((a, b) => a - b);
-    // minD (days[0]) is always 0 because startDayEpoch is derived from the first date
-    const maxD = days[days.length - 1];
+    // Determine the full range of weeks (0 to ~52)
+    // We use the full window length to ensure we capture "zero weeks" correctly for the timeline
+    const maxWeekIndex = Math.floor(maxTime / weekMs) - startWeekEpoch;
 
     const counts = [];
-    for (let d = 0; d <= maxD; d++) {
-        counts.push(bins.get(d) || 0);
+    // Key change: We fill ALL weeks from 0 to maxWeekIndex.
+    // If a week has 0 reviews, it enters the regression as 0 (which becomes log(1)=0).
+    // This correctly penalizes periods of silence.
+    for (let w = 0; w <= maxWeekIndex; w++) {
+        counts.push(bins.get(w) || 0);
     }
 
-    // Regression: x = weeks (so slope is "per week"), y = log(1 + count)
-    const x = counts.map((_, i) => i / 7);
+    // Regression: x = week index (0, 1, 2...), y = log(1 + weekly_count)
+    // No need to divide i by 7 here, as 'i' IS the week number.
+    const x = counts.map((_, i) => i);
     const yLog = counts.map(c => Math.log1p(c));
 
-    // linearRegressionSlope handles n < 2 by returning 0 (neutral)
+    // Calculate Slope
     const slope = linearRegressionSlope(x, yLog, appName);
 
     // [User Request] Log for each app
     const newestStr = new Date(maxTime).toISOString().split('T')[0];
     const oldestStr = new Date(minTime).toISOString().split('T')[0];
-    const daysWindow = 365;
+    // We log "weeks" now instead of days for clarity, or keep days window notation
+    const daysWindow = Math.floor((maxTime - minTime) / dayMs);
 
     console.log(`[Growth Metric Log] App: "${appName}"
-    - Reviews Found (Total passed): ${reviewDates.length}
     - Reviews Used (Last 365d): ${dates.length}
     - Time Window: ${daysWindow} days (${oldestStr} to ${newestStr})
-    - Final Growth Score (Slope): ${slope.toFixed(5)}`);
+    - Data Points (Weeks): ${counts.length}
+    - Final Growth Score (Weekly Log Trend): ${slope.toFixed(5)}`);
 
     return slope;
 }
