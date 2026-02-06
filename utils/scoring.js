@@ -370,30 +370,35 @@ function calculateGrowthMetrics(reviewDates, appName) {
     return computeGrowthSlope(reviewDates, appName);
 }
 
-function calculateReliabilityScore(totalDownloads, growthSlope) {
+function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unknown') {
     const dScore = downloadsToScore(totalDownloads);
     let finalRaw;
+    let gScore = null;
 
     if (growthSlope === null) {
         // No growth data (e.g. Android only) -> use pure downloads score
         finalRaw = dScore;
     } else {
-        const gScore = slopeToGrowthScore(growthSlope);
+        gScore = slopeToGrowthScore(growthSlope);
         finalRaw = getFinalScore(dScore, gScore); // 0 to 5
     }
 
-    const score10 = (finalRaw * 2).toFixed(1);
-
-    // Parse back to float for comparison
-    const scoreVal = parseFloat(score10);
+    const score100 = Math.round(finalRaw * 20);
 
     let grade = 'Low';
-    if (scoreVal >= 9.0) grade = 'Elite';
-    else if (scoreVal >= 7.0) grade = 'High';
-    else if (scoreVal >= 4.0) grade = 'Medium';
+    if (score100 >= 90) grade = 'Elite';
+    else if (score100 >= 70) grade = 'High';
+    else if (score100 >= 40) grade = 'Medium';
+
+    console.log(`[Reliability Score Log] App: "${appName}"
+    - Downloads: ${totalDownloads} (Score: ${dScore})
+    - Growth Slope: ${growthSlope === null ? 'N/A' : growthSlope.toFixed(5)} (Score: ${gScore === null ? 'N/A' : gScore})
+    - Matrix Logic: ${growthSlope === null ? 'Downloads Only' : `Matrix(${dScore}, ${gScore})`} -> ${finalRaw}
+    - Final Score: ${score100}
+    - Grading: ${grade}`);
 
     return {
-        score: scoreVal === 10 ? '10' : score10,
+        score: score100,
         grade: grade
     };
 }
