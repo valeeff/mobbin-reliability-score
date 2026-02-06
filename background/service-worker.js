@@ -331,7 +331,7 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
         if (isMatch(appName, actualTitle)) {
             // Parse Category from JSON "applicationCategory":"MUSIC_AND_AUDIO"
             const categoryMatch = detailsHtml.match(/"applicationCategory":"([^"]+)"/);
-            console.log(`Android: Candidate ${appId} - Category: "${categoryMatch ? categoryMatch[1] : 'N/A'}"`);
+
             // Convert from MUSIC_AND_AUDIO format to "Music & Audio" for matching
             let actualCategory = '';
             if (categoryMatch) {
@@ -342,13 +342,8 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
                     .replace(/\b\w/g, c => c.toUpperCase()); // Music & Audio
             }
 
-            console.log(`Android: Candidate ${appId} Category: "${actualCategory}" (Mobbin: "${mobbinCategory}")`);
-
             const isCatMatch = isCategoryMatch(mobbinCategory, actualCategory, 'android');
             const categoryScore = isCatMatch ? 1.0 : 0.0;
-            console.log(`Android: Candidate ${appId} - Category Check: Mobbin="${mobbinCategory}" vs Android="${actualCategory}" -> Match? ${isCatMatch ? 'YES' : 'NO'} (Score: ${categoryScore})`);
-
-            // Removed strict rejection: if (!isCatMatch) continue;
 
             // Parse Description from JSON for scoring
             const descMatch = detailsHtml.match(/"description":"([^"]+)"/);
@@ -367,15 +362,9 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
                 }
             }
 
-            console.log(`Android: Candidate ${appId} - Extracted Developer: "${actualDeveloper}"`);
-
             const devScore = developerScore(iosDeveloper, actualDeveloper);
-            console.log(`Android: Candidate ${appId} - Developer Comparison: iOS="${iosDeveloper || 'N/A'}" vs Android="${actualDeveloper}" -> Score: ${devScore}`);
-
-            console.log(`Android: Candidate ${appId} description score: ${descScore.toFixed(2)}, developer: "${actualDeveloper}" (score: ${devScore.toFixed(2)})`);
 
             // Parse downloads (still from HTML as not in JSON)
-            console.log(`Android: Candidate ${appId} - Attempting regex match for downloads...`);
             let minInstalls = 0;
 
             // Regex strategies (ordered by reliability)
@@ -390,18 +379,27 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
                 const match = detailsHtml.match(pattern);
                 if (match) {
                     minInstalls = match[1];
-                    console.log(`Android: Candidate ${appId} - Extracted downloads badge (min tier): "${minInstalls}" using pattern: ${pattern}`);
                     break;
                 }
             }
 
-            if (!minInstalls) {
-                console.log(`Android: Candidate ${appId} - FAILED to extract downloads badge. No regex matched.`);
-            }
             const ratingCountMatch = detailsHtml.match(/"ratingCount":"(\d+)"/);
+            let ratings = 0;
             if (ratingCountMatch) {
                 ratings = parseInt(ratingCountMatch[1], 10);
             }
+
+            const finalMatchScore = (categoryScore * 3.0) + descScore + (devScore * 2.0);
+
+            // Consolidated Log
+            console.groupCollapsed(`Android: Checking candidate ${appId}`);
+            console.log(`Title: "${actualTitle}"`);
+            console.log(`Category Check: Mobbin="${mobbinCategory}" vs Android="${actualCategory}" -> Match? ${isCatMatch ? 'YES' : 'NO'} (Score: ${categoryScore})`);
+            console.log(`Developer Comparison: iOS="${iosDeveloper || 'N/A'}" vs Android="${actualDeveloper}" -> Score: ${devScore}`);
+            console.log(`Description Comparison: ${descScore.toFixed(2)}, developer: "${actualDeveloper || 'N/A'}" (score: ${devScore.toFixed(2)})`);
+            console.log(`Downloads: ${minInstalls || 'Not found'}`);
+            console.log(`Result: Analyzed (Final Score: ${finalMatchScore.toFixed(2)})`);
+            console.groupEnd();
 
             validCandidates.push({
                 ratings: ratings,
@@ -413,9 +411,7 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
                 categoryScore: categoryScore,
                 descScore: descScore,
                 devScore: devScore,
-                // Composite score for sorting: weighted combination
-                // (categoryScore * 3.0) + descScore + (devScore * 2.0)
-                finalMatchScore: (categoryScore * 3.0) + descScore + (devScore * 2.0)
+                finalMatchScore: finalMatchScore
             });
         }
     }
@@ -430,7 +426,7 @@ async function fetchAndroidData(appName, mobbinCategory = null, mobbinTagline = 
         if (best.finalMatchScore <= 0) {
             console.log(`Android: Best candidate ${best.appId} has score 0.00. REJECTING.`);
         } else {
-            console.log(`Android: Selected best candidate: ${best.appId} (Score: ${best.finalMatchScore.toFixed(2)} | Cat: ${best.categoryScore}, Desc: ${best.descScore.toFixed(2)}, Dev: ${best.devScore.toFixed(2)})`);
+            console.log(`Android: Selected best candidate: ${best.appId} (Score: ${best.finalMatchScore.toFixed(2)})`);
             return best;
         }
     }
