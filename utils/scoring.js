@@ -225,7 +225,9 @@ function computeGrowthSlope(reviewDates, appName, androidData = {}, iosData = {}
     - ios: ${iosVal}
     - ios link: ${iosLinkVal}
     - android: ${androidVal}
-    - android link: ${androidLinkVal}`);
+    - android link: ${androidLinkVal}
+    - genre: ${androidData.category || androidData.genre || iosData.category || iosData.genre || 'N/A'}`);
+
 
     if (!Array.isArray(reviewDates) || reviewDates.length === 0) {
         console.log(`[Growth Metric Log] App: "${appName}"
@@ -412,8 +414,8 @@ function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unkno
     // Range 0->2.0, 5->10.0
     const mappedScore = 2 + (matrixScore * 1.6);
 
-    // Snap to nearest 0.5
-    const finalScore = Math.round(mappedScore * 2) / 2;
+    // Round to 1 decimal place
+    const finalScore = Number(mappedScore.toFixed(1));
 
     let grade = 'Low';
     if (finalScore >= 9.0) grade = 'Elite';

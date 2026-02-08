@@ -39,7 +39,7 @@ for (let i = 0; i < 30; i++) {
         datesGrowing.push(d.toISOString());
     }
 }
-const growthRes = calculateGrowthMetrics(datesGrowing);
+const growthRes = calculateGrowthMetrics(datesGrowing, 'Test App', { category: 'Communication', appId: 'com.test.app' }, { genre: 'Social Networking' });
 console.log('Growth Result:', growthRes);
 
 // Test Reliability Score

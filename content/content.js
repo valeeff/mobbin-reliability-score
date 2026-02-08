@@ -39,6 +39,11 @@ function formatCount(num) {
     return num.toString();
 }
 
+function formatReliabilityScore(score) {
+    const formatted = score.toFixed(1);
+    return formatted === "10.0" ? "10" : formatted;
+}
+
 function getColor(grade) {
     const colorMap = {
         'Elite': '#4CAF50', // Green
@@ -217,12 +222,11 @@ async function injectFullBadge(appName) {
 
     // Skeleton HTML
     badge.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <div class="mobbin-skeleton-pulse mobbin-skeleton-circle"></div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="mobbin-skeleton-pulse mobbin-skeleton-circle" style="width: 44px; height: 44px;"></div>
             <div>
-                <div class="mobbin-skeleton-pulse mobbin-skeleton-line long"></div>
-                <div class="mobbin-skeleton-pulse mobbin-skeleton-line short"></div>
-                <div class="mobbin-skeleton-pulse mobbin-skeleton-line short"></div>
+                <div class="mobbin-skeleton-pulse mobbin-skeleton-line" style="width: 80px; height: 14px; margin-bottom: 4px;"></div>
+                <div class="mobbin-skeleton-pulse mobbin-skeleton-line" style="width: 60px; height: 10px; margin-bottom: 0;"></div>
             </div>
         </div>
     `;
@@ -260,53 +264,48 @@ async function injectFullBadge(appName) {
     }
 
     // Handle case when neither store is found - still show popup with "Missing"
-    let scoreCard, downloadStats, androidId, iosId, finalGenre;
+    // Handle case when neither store is found - still show popup with "Missing"
+    let scoreCard;
 
     if (!data) {
         console.warn('Mobbin Reliability: No data found for', appName, '- showing Missing state');
         scoreCard = { score: 0, grade: 'N/A' };
-        downloadStats = { android: 0, ios: 0, total: 0, used_genre: pageGenre };
-        androidId = null;
-        iosId = null;
-        finalGenre = pageGenre;
     } else {
         scoreCard = data.scoreCard;
-        downloadStats = data.downloadStats;
-        androidId = data.androidId;
-        iosId = data.iosId;
-        finalGenre = downloadStats.used_genre || pageGenre;
     }
 
     // 5. UPDATE BADGE CONTENT
     const color = getColor(scoreCard.grade);
 
-    const androidLink = androidId
-        ? `<a href="https://play.google.com/store/apps/details?id=${androidId}" target="_blank" style="text-decoration: underline; color: #666;">Google Play</a>`
-        : 'Google Play';
-    const androidDownloads = androidId ? formatCount(downloadStats.android) : 'Missing';
-
-    // Prefer full appStoreUrl (with storefront) if available, otherwise construct generic URL
-    const iosUrl = (storeData?.iosData?.appStoreUrl) || (iosId ? `https://apps.apple.com/app/id${iosId}` : null);
-    const iosLink = iosUrl
-        ? `<a href="${iosUrl}" target="_blank" style="text-decoration: underline; color: #666;">App Store</a>`
-        : 'App Store';
-    const iosDownloads = iosId ? formatCount(downloadStats.ios) : 'Missing';
 
     badge.innerHTML = `
-        <div class="mobbin-content-fade" style="display: flex; align-items: center; gap: 10px;">
-            <div style="background: ${color}; color: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
-                ${scoreCard.score}<span style="font-size: 10px;">/10</span>
+        <div class="mobbin-content-fade" style="display: flex; align-items: center; gap: 8px;">
+            <div style="
+                background: ${color}; 
+                color: white; 
+                border-radius: 22px; 
+                padding: 0 12px;
+                min-width: 44px; 
+                height: 40px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                font-weight: 700; 
+                font-size: 18px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                flex-shrink: 0;
+            ">
+                ${formatReliabilityScore(scoreCard.score)}<span style="font-size: 10px; font-weight: 500; opacity: 0.9; margin-left: 2px; margin-top: 1px;">/10</span>
             </div>
-            <div>
-                <div style="font-weight: bold; font-size: 14px; color: #333;">${scoreCard.grade} Reliability</div>
-                <div style="font-size: 11px; color: #666; margin-top: 2px;">
-                    Genre: <b>${finalGenre || 'N/A'}</b>
-                </div>
-                <div style="font-size: 11px; color: #666; margin-top: 1px;">
-                    ${androidLink}: <b>${androidDownloads}</b>
-                </div>
-                <div style="font-size: 11px; color: #666;">
-                    ${iosLink}: <b>${iosDownloads}</b>
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <div style="
+                    font-weight: 600; 
+                    font-size: 15px; 
+                    color: #1d1d1f; 
+                    letter-spacing: -0.01em; 
+                    line-height: 1.2;
+                ">
+                    ${scoreCard.grade} Reliability
                 </div>
             </div>
         </div>
@@ -368,11 +367,11 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
 
     badge.innerHTML = `
         <div class="score-dot mobbin-content-fade" style="background: ${color};"></div>
-        <span class="mobbin-content-fade" style="color: #333;">${scoreCard.score}</span>
+        <span class="mobbin-content-fade" style="color: #333;">${formatReliabilityScore(scoreCard.score)}</span>
         
         <div class="mobbin-reliability-tooltip">
             <span class="close-btn">&times;</span>
-            <span class="tooltip-header" style="color:${color}">${scoreCard.grade} Reliability (${scoreCard.score})</span>
+            <span class="tooltip-header" style="color:${color}">${scoreCard.grade} Reliability (${formatReliabilityScore(scoreCard.score)})</span>
             <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Genre: <b>${downloadStats.used_genre || 'N/A'}</b></div>
             ${androidLink}
             ${iosLink}
