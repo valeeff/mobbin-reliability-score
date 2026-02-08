@@ -46,10 +46,10 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#008937ff', // Green
-        'High': '#91ec1aff', // Light Green
-        'Medium': '#f7c32bff', // Amber
-        'Low': '#f75c2bff' // Red
+        'Elite': '#22A06B', // Green
+        'High': '#8AD4A4', // Light Green
+        'Medium': '#F2C94C', // Amber
+        'Low': '#EB5757' // Red
     };
     return colorMap[grade] || '#9E9E9E';
 }
