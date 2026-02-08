@@ -188,28 +188,46 @@ function calculateTotalDownloads(androidData, iosData, mobbinGenre) {
 // ==========================================
 
 
-function linearRegressionSlope(x, y, appName) {
+function weightedLinearRegressionSlope(x, y, weights, appName) {
     const n = x.length;
     if (n < 2) return 0;
 
-    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-    for (let i = 0; i < n; i++) {
-        sumX += x[i];
-        sumY += y[i];
-        sumXY += x[i] * y[i];
-        sumXX += x[i] * x[i];
-    }
-    const denom = (n * sumXX - sumX * sumX);
-    if (denom === 0) return 0;
+    let sumW = 0, sumWX = 0, sumWY = 0, sumWXY = 0, sumWXX = 0;
 
-    const slope = (n * sumXY - sumX * sumY) / denom;
-    console.log('[Growth]', {
+    for (let i = 0; i < n; i++) {
+        const w = weights[i];
+        const xi = x[i];
+        const yi = y[i];
+
+        sumW += w;
+        sumWX += w * xi;
+        sumWY += w * yi;
+        sumWXY += w * xi * yi;
+        sumWXX += w * xi * xi;
+    }
+
+    // Weighted means
+    const xBar = sumWX / sumW;
+    const yBar = sumWY / sumW;
+
+    // Slope formula:
+    // b = Sum(w * (x - xBar) * (y - yBar)) / Sum(w * (x - xBar)^2)
+    // Expanded: (SumWXY - SumW * xBar * yBar) / (SumWXX - SumW * xBar^2)
+
+    // Using expanded form for efficiency:
+    const numerator = sumWXY - (sumW * xBar * yBar);
+    const denominator = sumWXX - (sumW * xBar * xBar);
+
+    if (Math.abs(denominator) < 1e-9) return 0; // Avoid division by zero
+
+    const slope = numerator / denominator;
+
+    console.log('[Growth - Weighted Regression Stats]', {
         appName,
         n,
-        sumX,
-        sumY,
-        sumXY,
-        sumXX,
+        // sumW,
+        // xBar,
+        // yBar,
         slope
     });
     return slope;
@@ -281,13 +299,47 @@ function computeGrowthSlope(reviewDates, appName, androidData = {}, iosData = {}
         counts.push(bins.get(w) || 0);
     }
 
-    // Regression: x = week index (0, 1, 2...), y = log(1 + weekly_count)
-    // No need to divide i by 7 here, as 'i' IS the week number.
-    const x = counts.map((_, i) => i);
-    const yLog = counts.map(c => Math.log1p(c));
+    // update the counts with the cumulative sum
+    //for (let i = 1; i < counts.length; i++) {
+    //    counts[i] += counts[i - 1];
+    //}
 
-    // Calculate Slope
-    const slope = linearRegressionSlope(x, yLog, appName);
+    // 3. Calculate Weighted Average of Weekly Growth (Absolute Difference)
+    // Formula: Sum( (Count[i] - Count[i-1]) * Weight[i] ) / Sum( Weight[i] )
+    // Weight[i] = i^0.25 (to give more weight to recent weeks)
+
+    if (counts.length < 2) return 0;
+
+    // 3. Log-Linear Regression
+    // y_t = ln(reviews_t + 1)
+    // y = a + b*t
+
+    if (counts.length < 2) return 0;
+
+    const x = [];
+    const y = [];
+    console.log(`[Growth - Log-Linear Regression Data]`);
+
+    const weights = [];
+    for (let i = 0; i < counts.length; i++) {
+        const val = Math.log(counts[i] + 1);
+        // Weight calculation: recent weeks matter more
+        // We use (i+1) because i starts at 0, and we don't want 0 weight for the first week if i=0
+        // Or keep your exact formula if week indices are large enough.
+        // Your formula was: Math.pow(i / 4, 0.25).
+        // Let's use Math.pow((i + 1) / 4, 0.25) to avoid 0 weight at start if desired, 
+        // OR adhere strictly to previous logic. Previous logic started loop at i=1 so index was >= 1.
+        // Current loop starts at 0. Let's maximize consistency: use (i+1).
+        const weekNum = i + 1;
+        const w = Math.pow(weekNum / 4, 0.25);
+
+        x.push(i);
+        y.push(val);
+        weights.push(w);
+        console.log(`[Week ${i}] Reviews: ${counts[i]}, Log(Reviews+1): ${val.toFixed(4)}, Weight: ${w.toFixed(4)}`);
+    }
+
+    const slope = weightedLinearRegressionSlope(x, y, weights, appName);
 
     // [User Request] Log for each app
     const newestStr = new Date(maxTime).toISOString().split('T')[0];
@@ -299,7 +351,7 @@ function computeGrowthSlope(reviewDates, appName, androidData = {}, iosData = {}
     - Reviews Used (Last 365d): ${dates.length}
     - Time Window: ${daysWindow} days (${oldestStr} to ${newestStr})
     - Data Points (Weeks): ${counts.length}
-    - Final Growth Score (Weekly Log Trend): ${slope.toFixed(5)}`);
+    - Final Growth Score (Log-Linear Regression Slope): ${slope.toFixed(5)}`);
 
     return slope;
 }

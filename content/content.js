@@ -46,8 +46,8 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#005503ff', // Green
-        'High': '#49b54dff', // Light Green
+        'Elite': '#008937ff', // Green
+        'High': '#91ec1aff', // Light Green
         'Medium': '#f7c32bff', // Amber
         'Low': '#f75c2bff' // Red
     };
@@ -294,7 +294,7 @@ async function injectFullBadge(appName) {
                 box-shadow: 0 2px 10px rgba(0,0,0,0.15);
                 flex-shrink: 0;
             ">
-                ${formatReliabilityScore(scoreCard.score)}<span style="font-size: 10px; font-weight: 500; opacity: 0.9; margin-left: 2px; margin-top: 1px;">/10</span>
+                ${formatReliabilityScore(scoreCard.score)}<span style="font-size: 12px; font-weight: 600; margin-left: 2px;">/10</span>
             </div>
             <div style="display: flex; flex-direction: column; justify-content: center;">
                 <div style="
@@ -359,13 +359,14 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
         : '<span style="display:block; color:#999; font-size:11px; margin-top:6px;">App Store: Missing</span>';
 
     // 3. UPDATE CONTENT WITH TRANSITION
-    // Apply dynamic styles for the loaded state
-    badge.style.background = color;
-    badge.style.border = 'none';
-    badge.style.color = 'white';
+    // Reset styles to default (white background, dark text) for consistency
+    badge.style.background = '';
+    badge.style.border = '';
+    badge.style.color = '';
 
     badge.innerHTML = `
-        <span class="mobbin-content-fade" style="font-size: 16px; font-weight: 900;">${formatReliabilityScore(scoreCard.score)}</span><span class="mobbin-content-fade" style="font-size: 12px; font-weight: 200; opacity: 0.9;">/10</span>
+        <div class="score-dot mobbin-content-fade" style="background: ${color};"></div>
+        <span class="mobbin-content-fade" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">${formatReliabilityScore(scoreCard.score)}</span>
         
         <div class="mobbin-reliability-tooltip">
             <span class="close-btn">&times;</span>
