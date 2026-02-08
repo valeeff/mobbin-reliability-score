@@ -46,8 +46,8 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#49b54dff', // Green
-        'High': '#85d52aff', // Light Green
+        'Elite': '#005503ff', // Green
+        'High': '#49b54dff', // Light Green
         'Medium': '#f7c32bff', // Amber
         'Low': '#f75c2bff' // Red
     };
@@ -359,14 +359,13 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
         : '<span style="display:block; color:#999; font-size:11px; margin-top:6px;">App Store: Missing</span>';
 
     // 3. UPDATE CONTENT WITH TRANSITION
-    // We replace the innerHTML. The pulse skeleton classes are removed.
-    // We wrapper the new content in a span with the fade class if needed, or just apply the animation to the elements.
-    // However, since minibadge has specific layout (flex), we can just replace innerHTML and let standard CSS handle it.
-    // To make it fade in, we can add the animation class to the elements.
+    // Apply dynamic styles for the loaded state
+    badge.style.background = color;
+    badge.style.border = 'none';
+    badge.style.color = 'white';
 
     badge.innerHTML = `
-        <div class="score-dot mobbin-content-fade" style="background: ${color};"></div>
-        <span class="mobbin-content-fade" style="color: #333;">${formatReliabilityScore(scoreCard.score)}</span>
+        <span class="mobbin-content-fade" style="font-size: 16px; font-weight: 900;">${formatReliabilityScore(scoreCard.score)}</span><span class="mobbin-content-fade" style="font-size: 12px; font-weight: 200; opacity: 0.9;">/10</span>
         
         <div class="mobbin-reliability-tooltip">
             <span class="close-btn">&times;</span>
