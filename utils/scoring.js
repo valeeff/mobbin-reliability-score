@@ -368,25 +368,40 @@ function computeGrowthSlope(reviewDates, appName, androidData = {}, iosData = {}
 // Uses bilinear interpolation on your table
 // ==============================
 
-// From downloads to Downloads Score (1-5)
+// Helper for linear interpolation
+function lerp(val, x0, y0, x1, y1) {
+    return y0 + (val - x0) * (y1 - y0) / (x1 - x0);
+}
+
+// From downloads to Downloads Score (continuous 1.0-5.0)
 function downloadsToScore(totalDownloads) {
     const d = Number(totalDownloads) || 0;
 
     if (d >= 5000000) return 5;
-    if (d >= 1000000) return 4;
-    if (d >= 200000) return 3;
-    if (d >= 50000) return 2;
-    return 1;
+    if (d >= 1000000) return lerp(d, 1000000, 4, 5000000, 5);
+    if (d >= 200000) return lerp(d, 200000, 3, 1000000, 4);
+    if (d >= 50000) return lerp(d, 50000, 2, 200000, 3);
+
+    // Scale 0 to 50k -> 1 to 2
+    return lerp(d, 0, 1, 50000, 2);
 }
 
-//From slope to Growth Score (1-5)
+// From slope to Growth Score (continuous 1.0-5.0)
 function slopeToGrowthScore(slope) {
     // slope is log1p(count) per week
-    if (slope > 0.06) return 5;
-    if (slope > 0.03) return 4;
-    if (slope > 0.01) return 3;
-    if (slope > -0.01) return 2;
-    return 1;
+    // Previously: >0.06=5, >0.03=4, >0.01=3, >-0.01=2, else 1
+    // We map these thresholds to integer scores and interpolate between them.
+    // We strictly anchor the lower bound for score 1 at -0.03 (symmetric-ish step)
+
+    if (slope >= 0.06) return 5;
+    if (slope >= 0.03) return lerp(slope, 0.03, 4, 0.06, 5);
+    if (slope >= 0.01) return lerp(slope, 0.01, 3, 0.03, 4);
+    if (slope >= -0.01) return lerp(slope, -0.01, 2, 0.01, 3);
+
+    // Below -0.01
+    // Map -0.03 to -0.01 -> 1 to 2
+    if (slope <= -0.03) return 1;
+    return lerp(slope, -0.03, 1, -0.01, 2);
 }
 
 const SCORE_TABLE = {
@@ -475,8 +490,8 @@ function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unkno
     else if (finalScore >= 5.0) grade = 'Medium';
 
     console.log(`[Reliability Score Log] App: "${appName}"
-    - Downloads: ${totalDownloads} (Score: ${dScore})
-    - Growth Slope: ${growthSlope === null ? 'N/A' : growthSlope.toFixed(5)} (Score: ${gScore === null ? 'N/A' : gScore})
+    - Downloads: ${totalDownloads} (Score: ${dScore.toFixed(2)})
+    - Growth Slope: ${growthSlope === null ? 'N/A' : growthSlope.toFixed(5)} (Score: ${gScore === null ? 'N/A' : gScore.toFixed(2)})
     - Matrix Score (0-5): ${matrixScore.toFixed(2)}
     - Mapped Score (2-10): ${mappedScore.toFixed(2)} -> Snapped: ${finalScore}
     - Grading: ${grade}`);
