@@ -222,11 +222,10 @@ async function injectFullBadge(appName) {
 
     // Skeleton HTML
     badge.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <div class="mobbin-skeleton-pulse mobbin-skeleton-circle" style="width: 44px; height: 44px;"></div>
-            <div>
-                <div class="mobbin-skeleton-pulse mobbin-skeleton-line" style="width: 80px; height: 14px; margin-bottom: 4px;"></div>
-                <div class="mobbin-skeleton-pulse mobbin-skeleton-line" style="width: 60px; height: 10px; margin-bottom: 0;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="mobbin-skeleton-pulse" style="width: 64px; height: 40px; border-radius: 22px;"></div>
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <div class="mobbin-skeleton-pulse" style="width: 90px; height: 16px; border-radius: 4px;"></div>
             </div>
         </div>
     `;
