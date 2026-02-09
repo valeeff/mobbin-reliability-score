@@ -46,10 +46,10 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#22A06B', // Green
-        'High': '#8AD4A4', // Light Green
-        'Medium': '#F2C94C', // Amber
-        'Low': '#EB5757' // Red
+        'Elite': '#00D26A', // Green
+        'High': '#B2FF59', // Light Green / Lime
+        'Medium': '#FFCC00', // Amber
+        'Low': '#FF4444' // Red
     };
     return colorMap[grade] || '#9E9E9E';
 }
@@ -311,6 +311,27 @@ async function injectFullBadge(appName) {
     `;
 }
 
+// Helper for Adoption Label
+function getAdoptionLabel(score) {
+    const s = Math.round(score);
+    if (s >= 5) return 'Mass market';
+    if (s === 4) return 'Widely used';
+    if (s === 3) return 'Growing';
+    if (s === 2) return 'Limited';
+    return 'Emerging';
+}
+
+// Helper for Growth Label
+function getGrowthLabel(score) {
+    if (score === null) return 'N/A';
+    const s = Math.round(score);
+    if (s >= 5) return 'Explosive';
+    if (s === 4) return 'Accelerating';
+    if (s === 3) return 'Rising';
+    if (s === 2) return 'Flat';
+    return 'Declining';
+}
+
 // ✅ POPULATE MINI BADGE - A. multi apps page
 // appStoreUrl: optional direct iOS URL from Mobbin (passed through to fetchAndCalculateScore)
 async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = null, appStoreUrl = null) {
@@ -335,7 +356,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
     let scoreCard, downloadStats, androidId, iosId;
 
     if (!data) {
-        scoreCard = { score: 0, grade: 'N/A' };
+        scoreCard = { score: 0, grade: 'N/A', dScore: 1, gScore: null };
         downloadStats = { android: 0, ios: 0, total: 0, used_genre: genre };
         androidId = null;
         iosId = null;
@@ -344,19 +365,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
     }
     const color = getColor(scoreCard.grade);
 
-    const androidLink = androidId
-        ? `<a href="https://play.google.com/store/apps/details?id=${androidId}" target="_blank">Google Play: <b>${formatCount(downloadStats.android)}</b></a>`
-        : '<span style="display:block; color:#999; font-size:11px; margin-top:6px;">Google Play: Missing</span>';
-
-    // Prefer full appStoreUrl (with storefront) if available, otherwise construct generic URL
-    const iosUrl = data?.iosData?.appStoreUrl || (iosId ? `https://apps.apple.com/app/id${iosId}` : null);
-
-    console.log(`[Mini Badge] App: ${appName}, iOS URL displayed: ${iosUrl ? 'YES' : 'NO'} (${iosUrl || 'N/A'})`);
     console.log(`[Mini Badge] App: ${appName}, Score: ${scoreCard?.score}, Downloads: Android=${formatCount(downloadStats?.android)} iOS=${formatCount(downloadStats?.ios)}`);
-
-    const iosLink = iosUrl
-        ? `<a href="${iosUrl}" target="_blank">App Store: <b>${formatCount(downloadStats.ios)}</b></a>`
-        : '<span style="display:block; color:#999; font-size:11px; margin-top:6px;">App Store: Missing</span>';
 
     // 3. UPDATE CONTENT WITH TRANSITION
     // Reset styles to default (white background, dark text) for consistency
@@ -364,16 +373,48 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
     badge.style.border = '';
     badge.style.color = '';
 
+    const adoptionLabel = getAdoptionLabel(scoreCard.dScore);
+    const growthLabel = getGrowthLabel(scoreCard.gScore);
+
     badge.innerHTML = `
         <div class="score-dot mobbin-content-fade" style="background: ${color};"></div>
         <span class="mobbin-content-fade" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">${formatReliabilityScore(scoreCard.score)}</span>
         
         <div class="mobbin-reliability-tooltip">
-            <span class="close-btn">&times;</span>
-            <span class="tooltip-header" style="color:${color}">${scoreCard.grade} Reliability (${formatReliabilityScore(scoreCard.score)})</span>
-            <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Genre: <b>${downloadStats.used_genre || 'N/A'}</b></div>
-            ${androidLink}
-            ${iosLink}
+            <div class="tooltip-header-row">
+                <span>${appName} Reliability Score</span>
+                <span class="close-btn">&times;</span>
+            </div>
+            
+            <div class="score-row">
+                <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
+                <span class="total-score">/10</span>
+                <span class="grade-label" style="color: #1d1d1f;">${scoreCard.grade} Reliability</span>
+            </div>
+            
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background-color: ${color};"></div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Adoption</span>
+                    <span class="metric-value">${adoptionLabel}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Growth</span>
+                    <span class="metric-value">${growthLabel}</span>
+                </div>
+            </div>
+            
+            <div class="tooltip-divider"></div>
+            
+            <div class="footer-row">
+                <div class="footer-title">How is the score calculated?</div>
+                <div class="footer-text">
+                    It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
+                </div>
+            </div>
         </div>
     `;
 

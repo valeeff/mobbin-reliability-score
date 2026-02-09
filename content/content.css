@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
 .mobbin-reliability-badge {
     position: fixed;
     bottom: 24px;
@@ -13,7 +15,7 @@
         0 0 0 1px rgba(255, 255, 255, 0.4);
     /* Glass border highlight */
     z-index: 10000;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -78,7 +80,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     border: 1px solid #f0f0f0;
     font-size: 12px;
     font-weight: 600;
@@ -227,4 +229,136 @@
 
 .mobbin-content-fade {
     animation: contentFadeIn 0.15s ease-in;
+}
+
+/* NEW TOOLTIP DESIGN */
+.mobbin-reliability-tooltip {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    margin-bottom: 8px;
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    width: 280px;
+    z-index: 100;
+    border: 1px solid #eee;
+    text-align: left;
+    color: #1d1d1f;
+    animation: fadeIn 0.2s ease-out;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.mobbin-reliability-tooltip .tooltip-header-row {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    line-height: 1.3;
+}
+
+.mobbin-reliability-tooltip .close-btn {
+    font-size: 18px;
+    color: #999;
+    cursor: pointer;
+    line-height: 1;
+    margin-left: 8px;
+    margin-top: -2px;
+}
+
+.mobbin-reliability-tooltip .close-btn:hover {
+    color: #333;
+}
+
+.mobbin-reliability-tooltip .score-row {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.mobbin-reliability-tooltip .big-score {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1;
+}
+
+.mobbin-reliability-tooltip .total-score {
+    font-size: 18px;
+    font-weight: 400;
+    color: #86868b;
+    margin-left: 2px;
+}
+
+.mobbin-reliability-tooltip .grade-label {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.mobbin-reliability-tooltip .progress-bar-bg {
+    width: 100%;
+    height: 6px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.mobbin-reliability-tooltip .progress-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease-out;
+}
+
+.mobbin-reliability-tooltip .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.mobbin-reliability-tooltip .metric-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.mobbin-reliability-tooltip .metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #25252a;
+    margin-bottom: 2px;
+}
+
+.mobbin-reliability-tooltip .metric-value {
+    font-size: 12px;
+    color: #2f2f35;
+    line-height: 1.3;
+    font-weight: 400;
+
+}
+
+.mobbin-reliability-tooltip .tooltip-divider {
+    height: 1px;
+    background-color: #f0f0f0;
+    margin-bottom: 12px;
+}
+
+.mobbin-reliability-tooltip .footer-title {
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    color: #25252a;
+}
+
+.mobbin-reliability-tooltip .footer-text {
+    font-size: 12px;
+    line-height: 1.4;
+    color: #46464e;
+    font-weight: 400;
+
 }

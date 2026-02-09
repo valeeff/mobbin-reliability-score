@@ -498,7 +498,9 @@ function calculateReliabilityScore(totalDownloads, growthSlope, appName = 'Unkno
 
     return {
         score: finalScore,
-        grade: grade
+        grade: grade,
+        dScore: dScore,
+        gScore: gScore
     };
 }
 
