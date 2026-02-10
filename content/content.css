@@ -328,7 +328,8 @@
 .mobbin-reliability-tooltip .progress-bar-fill {
     height: 100%;
     border-radius: 4px;
-    animation: fillProgress 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    /*animation easy out with 0.2 delay*/
+    animation: fillProgress 0.6s ease-out 0.1s;
 }
 
 .mobbin-reliability-tooltip .metrics-grid {
