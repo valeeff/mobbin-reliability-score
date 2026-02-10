@@ -522,25 +522,23 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
         ? `<div class="score-dot mobbin-content-fade" style="background: #bababaff;"></div><span class="mobbin-content-fade" style="font-size: 12px; font-weight: 600; line-height: 2; color: #6e6e73;">Inactive</span>`
         : `<div class="score-dot mobbin-content-fade" style="background: ${color};"></div><span class="mobbin-content-fade" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">${formatReliabilityScore(scoreCard.score)}</span>`;
 
-    badge.innerHTML = `
-        ${badgeContent}
-
-    <div class="mobbin-reliability-tooltip">
-        <div class="tooltip-header-row">
-            <span>${appName} Reliability Score</span>
-            <span class="close-btn">&times;</span>
-        </div>
-
-        <div class="score-row">
+    const tooltipMiddleContent = isInactive
+        ? `<div style="font-size: 11px; font-weight: 400; color: #1d1d1f; line-height: 1.6; margin-bottom: 12px;">
+             This app is no longer available on the App Store or Google Play, so a Reliability Score can’t be calculated.
+             <br>
+             Apps that are no longer available are often discontinued, acquired or rebranded.
+           </div>`
+        : `<div class="score-row">
             <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
             <span class="total-score">/10</span>
             <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
         </div>
 
+        
         <div class="progress-bar-bg">
             <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
         </div>
-
+        
         <div class="metrics-grid">
             <div class="metric-item">
                 <span class="metric-label">Adoption:</span>
@@ -550,7 +548,18 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
                 <span class="metric-label">Growth:</span>
                 <span class="metric-value">${growthLabel}</span>
             </div>
-        </div>
+        </div>`;
+
+    badge.innerHTML = `
+        ${badgeContent}
+        
+        <div class="mobbin-reliability-tooltip">
+            <div class="tooltip-header-row">
+                <span>${appName} Reliability Score</span>
+                <span class="close-btn">&times;</span>
+            </div>
+            
+            ${tooltipMiddleContent}
 
         <div class="accordion-toggle">
             <span class="accordion-text">See more</span>
