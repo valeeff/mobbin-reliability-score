@@ -316,9 +316,9 @@ function getAdoptionLabel(score) {
     const s = Math.round(score);
     if (s >= 5) return 'Mass market';
     if (s === 4) return 'Widely used';
-    if (s === 3) return 'Growing';
-    if (s === 2) return 'Limited';
-    return 'Emerging';
+    if (s === 3) return 'Solid user base';
+    if (s === 2) return 'Niche';
+    return 'Early-stage';
 }
 
 // Helper for Growth Label
@@ -389,7 +389,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
             <div class="score-row">
                 <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
                 <span class="total-score">/10</span>
-                <span class="grade-label" style="color: #1d1d1f;">${scoreCard.grade} Reliability</span>
+                <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
             </div>
             
             <div class="progress-bar-bg">
@@ -398,21 +398,41 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
             
             <div class="metrics-grid">
                 <div class="metric-item">
-                    <span class="metric-label">Adoption</span>
+                    <span class="metric-label">Adoption:</span>
                     <span class="metric-value">${adoptionLabel}</span>
                 </div>
                 <div class="metric-item">
-                    <span class="metric-label">Growth</span>
+                    <span class="metric-label">Growth:</span>
                     <span class="metric-value">${growthLabel}</span>
                 </div>
             </div>
             
-            <div class="tooltip-divider"></div>
-            
-            <div class="footer-row">
-                <div class="footer-title">How is the score calculated?</div>
-                <div class="footer-text">
-                    It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
+            <div class="accordion-toggle">
+                <span class="accordion-text">See more</span>
+                <svg class="accordion-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+
+            <div class="accordion-content">
+                <div class="footer-row">
+                    <div class="footer-title">How is the score calculated?</div>
+                    <div class="footer-text">
+                        It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
+                    </div>
+                </div>
+
+                <div class="blue-card">
+                    <div class="blue-card-header">
+                        <img src="${chrome.runtime.getURL('images/mrs_onLight.svg')}" alt="Mobbin Logo" class="blue-card-logo">
+                        <span class="blue-card-title">Mobbin <span style="color: #0055FF;">Reliability</span> Score</span>
+                    </div>
+                    <div class="blue-card-desc">
+                        Built to quickly tell if an app is worth your time.
+                    </div>
+                    <div class="blue-card-footer">
+                        <span class="megaphone">📣</span> Now in <b>Beta</b> - <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">click here for feedback or suggestions</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -421,6 +441,28 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
     // Interaction Logic
     const tooltip = badge.querySelector('.mobbin-reliability-tooltip');
     const closeBtn = badge.querySelector('.close-btn');
+    const toggleBtn = badge.querySelector('.accordion-toggle');
+    const accordionContent = badge.querySelector('.accordion-content');
+
+    // Accordion Toggle
+    if (toggleBtn && accordionContent) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent badge click
+            e.preventDefault();
+
+            const isHidden = !accordionContent.classList.contains('visible');
+
+            if (isHidden) {
+                accordionContent.classList.add('visible');
+                toggleBtn.classList.add('expanded');
+                toggleBtn.querySelector('.accordion-text').textContent = 'See less';
+            } else {
+                accordionContent.classList.remove('visible');
+                toggleBtn.classList.remove('expanded');
+                toggleBtn.querySelector('.accordion-text').textContent = 'See more';
+            }
+        });
+    }
 
     // Toggle on badge click
     badge.addEventListener('click', (e) => {
