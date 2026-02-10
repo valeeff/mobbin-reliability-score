@@ -46,14 +46,22 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#00D26A', // Green
-        'High': '#B2FF59', // Light Green / Lime
+        'Elite': '#00c261ff', // Green
+        'High': '#79e300ff', // Light Green / Lime
         'Medium': '#FFCC00', // Amber
-        'Low': '#FF4444' // Red
+        'Low': '#ff4343ff' // Red
     };
     return colorMap[grade] || '#9E9E9E';
 }
-
+function getGradient(grade) {
+    const gradientMap = {
+        'Elite': 'linear-gradient(90deg, #00c261ff 0%, #3aff9aff 100%)',
+        'High': 'linear-gradient(90deg, #79e300ff 0%, #a7ff3cff 100%)',
+        'Medium': 'linear-gradient(90deg, #FFCC00 0%, #ffe100ff 100%)',
+        'Low': 'linear-gradient(90deg, #FF4444 0%, #f91f1fff 100%)'
+    };
+    return gradientMap[grade] || 'linear-gradient(90deg, #9E9E9E 0%, #C2C2C2 100%)';
+}
 // ✅ FETCH STORE DATA WRAPPER - A. multi apps page
 // skipIos: if true, skips iOS App Store search (used when we have direct URL)
 async function fetchStoreData(appName, genre = null, tagline = null, skipIos = false, iosDeveloper = null) {
@@ -364,6 +372,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
         ({ scoreCard, downloadStats, androidId, iosId } = data);
     }
     const color = getColor(scoreCard.grade);
+    const gradient = getGradient(scoreCard.grade);
 
     console.log(`[Mini Badge] App: ${appName}, Score: ${scoreCard?.score}, Downloads: Android=${formatCount(downloadStats?.android)} iOS=${formatCount(downloadStats?.ios)}`);
 
@@ -393,7 +402,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
             </div>
             
             <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background-color: ${color};"></div>
+                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
             </div>
             
             <div class="metrics-grid">
@@ -431,7 +440,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
                         Built to quickly tell if an app is worth your time.
                     </div>
                     <div class="blue-card-footer">
-                        <span class="megaphone">📣</span> Now in <b>Beta</b> - <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">click here for feedback or suggestions</a>
+                        <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">click here for feedback or suggestions</a>
                     </div>
                 </div>
             </div>

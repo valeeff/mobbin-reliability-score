@@ -903,25 +903,64 @@ async function fetchAggregatedReviews(appId) {
     const TOP_MARKETS = STOREFRONTS; // Use ALL storefronts for max accuracy
 
     // Helper for single RSS fetch
+    // Helper for single RSS fetch with XML fallback
     const fetchRSS = async (country) => {
-        const rssUrl = `https://itunes.apple.com/${country}/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
-        try {
-            const resp = await fetch(rssUrl);
-            if (!resp.ok) return [];
-            const data = await resp.json();
-            if (data.feed && data.feed.entry) {
-                // Entry can be object or array
-                const entries = Array.isArray(data.feed.entry) ? data.feed.entry : [data.feed.entry];
+        const jsonUrl = `https://itunes.apple.com/${country}/rss/customerreviews/id=${appId}/sortBy=mostRecent/json`;
+        const xmlUrl = `https://itunes.apple.com/${country}/rss/customerreviews/id=${appId}/sortBy=mostRecent/xml`;
 
-                // Map to objects with ID for deduplication
-                return entries.map(e => ({
-                    id: e.id?.label, // Unique review ID
-                    date: e.updated?.label
-                })).filter(e => e.date); // Ensure date exists
+        // 1. Try JSON
+        try {
+            const resp = await fetch(jsonUrl);
+            if (resp.ok) {
+                const text = await resp.text();
+                const data = JSON.parse(text);
+                if (data.feed && data.feed.entry) {
+                    const entries = Array.isArray(data.feed.entry) ? data.feed.entry : [data.feed.entry];
+                    console.log(`[Reviews] ${country} (JSON): Found ${entries.length} reviews`);
+                    return entries.map(e => ({
+                        id: e.id?.label,
+                        date: e.updated?.label
+                    })).filter(e => e.date);
+                }
+            } else {
+                console.warn(`[Reviews] JSON fetch failed for ${country}: ${resp.status}`);
             }
         } catch (e) {
-            // fast fail
+            console.warn(`[Reviews] JSON error for ${country}:`, e);
         }
+
+        // 2. Fallback to XML
+        try {
+            console.log(`[Reviews] Attempting XML fallback for ${country}...`);
+            const resp = await fetch(xmlUrl);
+            if (resp.ok) {
+                const text = await resp.text();
+                // Simple regex extraction for entry dates
+                // We look for <updated> inside <entry> (ideal) or just all <updated>
+                // Format: <updated>2023-10-25T12:00:00-07:00</updated>
+                const dates = [];
+                // Capture content between <updated> tags
+                const regex = /<updated>([^<]+)<\/updated>/g;
+                let match;
+                while ((match = regex.exec(text)) !== null) {
+                    dates.push({ date: match[1] }); // No ID, but date allows growth calc
+                }
+
+                // Remove the first one if it matches the feed updated time? 
+                // Usually the first <updated> is the feed's timestamp, subsequent are entries.
+                // But keeping it adds at most 1 data point (current time) which is fine for "recent activity".
+
+                if (dates.length > 0) {
+                    console.log(`[Reviews] ${country} (XML): Found ${dates.length} timestamps`);
+                    return dates;
+                }
+            } else {
+                console.warn(`[Reviews] XML fetch failed for ${country}: ${resp.status}`);
+            }
+        } catch (e) {
+            console.warn(`[Reviews] XML error for ${country}:`, e);
+        }
+
         return [];
     };
 

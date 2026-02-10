@@ -319,10 +319,16 @@
     overflow: hidden;
 }
 
+@keyframes fillProgress {
+    from {
+        width: 0;
+    }
+}
+
 .mobbin-reliability-tooltip .progress-bar-fill {
     height: 100%;
     border-radius: 4px;
-    transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    animation: fillProgress 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mobbin-reliability-tooltip .metrics-grid {
@@ -386,7 +392,7 @@
 
 .accordion-content {
     display: none;
-    margin-top: 8px;
+    margin-top: 12px;
     animation: fadeIn 0.3s ease-out;
 }
 
@@ -412,7 +418,7 @@
 .blue-card {
     background-color: #EBF2FF;
     border-radius: 8px;
-    padding: 8px;
+    padding: 12px;
     margin-top: 12px;
     display: flex;
     flex-direction: column;
@@ -422,7 +428,7 @@
 .blue-card-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 2px;
 }
 
@@ -433,7 +439,7 @@
 }
 
 .blue-card-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 900;
     color: #000000;
     letter-spacing: -0.02em;
@@ -441,23 +447,23 @@
 }
 
 .blue-card-desc {
-    font-size: 10px;
-    color: #46464e;
+    font-size: 11px;
+    color: #1d1d1f;
     line-height: 1.4;
     font-weight: 400;
 }
 
 .blue-card-footer {
-    font-size: 10px;
-    color: #46464e;
+    font-size: 11px;
+    color: #1d1d1f;
     line-height: 1.4;
     display: flex;
     align-items: center;
+    font-weight: 400;
 }
 
 .blue-card-email {
-    font-size: 10px !important;
-    color: #46464e;
+    font-size: 11px !important;
     text-decoration: underline !important;
     font-weight: 400;
     cursor: pointer;
