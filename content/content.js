@@ -509,8 +509,8 @@ function getGrowthLabel(score) {
     if (score === null) return 'N/A';
     const s = Math.round(score);
     if (s >= 5) return 'Explosive';
-    if (s === 4) return 'Accelerating';
-    if (s === 3) return 'Rising';
+    if (s === 4) return 'Fast';
+    if (s === 3) return 'Slow';
     if (s === 2) return 'Flat';
     return 'Declining';
 }

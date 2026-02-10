@@ -217,6 +217,7 @@
     width: 32px;
     height: 18px;
     border-radius: 20px;
+    padding-vertical: 4px;
     display: inline-block;
 }
 
