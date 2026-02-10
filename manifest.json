@@ -21,15 +21,15 @@
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {
-      "16": "images/icons/icon/16.png",
-      "48": "images/icons/icon/48.png",
-      "128": "images/icons/icon/128.png"
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
     }
   },
   "icons": {
-    "16": "images/icons/icon/16.png",
-    "48": "images/icons/icon/48.png",
-    "128": "images/icons/icon/128.png"
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
   },
   "content_scripts": [
     {
@@ -50,9 +50,9 @@
     {
       "resources": [
         "images/mrs_onLight.svg",
-        "images/icons/icon/16.png",
-        "images/icons/icon/48.png",
-        "images/icons/icon/128.png"
+        "icons/16.png",
+        "icons/48.png",
+        "icons/128.png"
       ],
       "matches": [
         "<all_urls>"
