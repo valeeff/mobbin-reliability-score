@@ -12,7 +12,8 @@
   "host_permissions": [
     "*://mobbin.com/*",
     "*://play.google.com/*",
-    "*://apps.apple.com/*"
+    "*://apps.apple.com/*",
+    "*://itunes.apple.com/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
