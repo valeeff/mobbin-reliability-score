@@ -739,11 +739,9 @@ async function setCache(key, value, ttlDays) {
 // Aggregates ratings from top storefronts to estimate global total.
 const STOREFRONTS = [
     'us', 'gb', 'ca', 'au',       // Tier 1 (English)
-    'de', 'fr', 'it', 'es', 'pt', 'pl', // Tier 2 (Europe)
-    'br', 'mx',                   // Tier 2 (LatAm)
+    'de', 'fr',                   // Tier 2 (Europe)
     'in', 'pk',                   // Tier 2 (Asia - massive volume)
-    'jp', 'kr', 'cn', 'tw', 'sg', // Tier 1 (Asia - High value)
-    'ru'                          // Tier 2 (Other)
+    'jp', 'kr', 'cn'               // Tier 1 (Asia - High value)
 ];
 
 const MAX_STOREFRONTS = 15;
@@ -966,8 +964,21 @@ async function fetchAggregatedReviews(appId) {
 
     console.log(`[Reviews] Fetching aggregated reviews for ${appId} from:`, TOP_MARKETS);
 
-    // Execute in parallel
-    const results = await Promise.all(TOP_MARKETS.map(country => fetchRSS(country)));
+    // Limit concurrency to avoid 403 Forbidden (Rate Limiting)
+    // Batch size: 3
+    const BATCH_SIZE = 3;
+    const results = [];
+
+    for (let i = 0; i < TOP_MARKETS.length; i += BATCH_SIZE) {
+        const batch = TOP_MARKETS.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(country => fetchRSS(country)));
+        results.push(...batchResults);
+
+        // Small delay between batches to be nice
+        if (i + BATCH_SIZE < TOP_MARKETS.length) {
+            await new Promise(r => setTimeout(r, 200));
+        }
+    }
 
     const allReviews = results.flat();
 
