@@ -501,7 +501,7 @@ function getAdoptionLabel(score) {
     if (s === 4) return 'Widely used';
     if (s === 3) return 'Solid user base';
     if (s === 2) return 'Niche';
-    return 'Early-stage';
+    return 'Low user base';
 }
 
 // Helper for Growth Label
