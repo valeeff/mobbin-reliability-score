@@ -72,7 +72,7 @@
     bottom: 0px;
     right: 0px;
     background: white;
-    padding: 4px 8px;
+    padding: 2px 8px;
     border-radius: 20px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     z-index: 5;
@@ -116,9 +116,13 @@
     animation: fadeIn 0.2s ease-out;
 }
 
-.mobbin-reliability-minibadge:hover .mobbin-reliability-tooltip,
+/* Tooltip for Mini Badge */
+.mobbin-reliability-tooltip.visible,
 .mobbin-reliability-tooltip.expanded {
-    display: block;
+    visibility: visible;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }
 
 .mobbin-reliability-tooltip .close-btn {
@@ -233,7 +237,13 @@
 
 /* NEW TOOLTIP DESIGN */
 .mobbin-reliability-tooltip {
-    display: none;
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.3s;
+    pointer-events: none;
+
     position: absolute;
     bottom: 100%;
     right: 0;
@@ -247,7 +257,6 @@
     border: 1px solid #eee;
     text-align: left;
     color: #1d1d1f;
-    animation: fadeIn 0.2s ease-out;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -459,7 +468,7 @@
     color: #1d1d1f;
     line-height: 1.4;
     display: flex;
-    align-items: center;
+    align-items: top;
     font-weight: 400;
 }
 
@@ -469,6 +478,7 @@
     font-weight: 400;
     cursor: pointer;
     margin-left: 4px;
+    margin-top: 0px !important;
 }
 
 .blue-card-email:hover {
@@ -477,5 +487,5 @@
 
 .megaphone {
     font-size: 12px;
-    margin-right: 6px;
+    margin-right: 3px;
 }

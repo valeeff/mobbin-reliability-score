@@ -276,13 +276,16 @@ async function injectFullBadge(appName) {
 
     if (!data) {
         console.warn('Mobbin Reliability: No data found for', appName, '- showing Missing state');
-        scoreCard = { score: 0, grade: 'N/A' };
+        scoreCard = { score: 0, grade: 'N/A', dScore: 1, gScore: null };
     } else {
         scoreCard = data.scoreCard;
     }
 
     // 5. UPDATE BADGE CONTENT
     const color = getColor(scoreCard.grade);
+    const gradient = getGradient(scoreCard.grade);
+    const adoptionLabel = getAdoptionLabel(scoreCard.dScore);
+    const growthLabel = getGrowthLabel(scoreCard.gScore);
 
 
     badge.innerHTML = `
@@ -316,7 +319,136 @@ async function injectFullBadge(appName) {
                 </div>
             </div>
         </div>
+
+        <div class="mobbin-reliability-tooltip">
+            <div class="tooltip-header-row">
+                <span>${appName} Reliability Score</span>
+                <span class="close-btn">&times;</span>
+            </div>
+            
+            <div class="score-row">
+                <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
+                <span class="total-score">/10</span>
+                <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
+            </div>
+            
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">Adoption:</span>
+                    <span class="metric-value">${adoptionLabel}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Growth:</span>
+                    <span class="metric-value">${growthLabel}</span>
+                </div>
+            </div>
+            
+            <div class="accordion-toggle">
+                <span class="accordion-text">See more</span>
+                <svg class="accordion-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </div>
+
+            <div class="accordion-content">
+                <div class="footer-row">
+                    <div class="footer-title">How is the score calculated?</div>
+                    <div class="footer-text">
+                        It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
+                    </div>
+                </div>
+
+                <div class="blue-card">
+                    <div class="blue-card-header">
+                        <img src="${chrome.runtime.getURL('images/mrs_onLight.svg')}" alt="Mobbin Logo" class="blue-card-logo">
+                        <span class="blue-card-title">Mobbin <span style="color: #0055FF;">Reliability</span> Score</span>
+                    </div>
+                    <div class="blue-card-desc">
+                        Built to quickly tell if an app is worth your time.
+                    </div>
+                    <div class="blue-card-footer">
+                        <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">Send feedback ❤️</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
+
+    // Interaction Logic
+    const tooltip = badge.querySelector('.mobbin-reliability-tooltip');
+
+    // Hover Logic with Delay
+    let hoverTimer;
+
+    const showTooltip = () => {
+        clearTimeout(hoverTimer);
+        tooltip.classList.add('visible');
+    };
+
+    const hideTooltip = () => {
+        hoverTimer = setTimeout(() => {
+            tooltip.classList.remove('visible');
+        }, 250);
+    };
+
+    badge.addEventListener('mouseenter', showTooltip);
+    badge.addEventListener('mouseleave', hideTooltip);
+    // Ensure tooltip stays open if hovered directly (handling gaps/re-entry)
+    tooltip.addEventListener('mouseenter', showTooltip);
+    tooltip.addEventListener('mouseleave', hideTooltip);
+
+    const closeBtn = badge.querySelector('.close-btn');
+    const toggleBtn = badge.querySelector('.accordion-toggle');
+    const accordionContent = badge.querySelector('.accordion-content');
+
+    // Accordion Toggle
+    if (toggleBtn && accordionContent) {
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent badge click
+            e.preventDefault();
+
+            const isHidden = !accordionContent.classList.contains('visible');
+
+            if (isHidden) {
+                accordionContent.classList.add('visible');
+                toggleBtn.classList.add('expanded');
+                toggleBtn.querySelector('.accordion-text').textContent = 'See less';
+            } else {
+                accordionContent.classList.remove('visible');
+                toggleBtn.classList.remove('expanded');
+                toggleBtn.querySelector('.accordion-text').textContent = 'See more';
+            }
+        });
+    }
+
+    // Toggle on badge click
+    badge.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Toggle expanded state
+        tooltip.classList.toggle('expanded');
+    });
+
+    // Close on X click
+    closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); // prevent badge click
+        tooltip.classList.remove('expanded');
+    });
+
+    // Prevent clicks inside tooltip from closing it or navigating, unless it's a link
+    tooltip.addEventListener('click', (e) => {
+        if (e.target.closest('a')) {
+            e.stopPropagation(); // Stop bubbling but allow default action (navigation)
+            return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+    });
 }
 
 // Helper for Adoption Label
@@ -440,7 +572,7 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
                         Built to quickly tell if an app is worth your time.
                     </div>
                     <div class="blue-card-footer">
-                        <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">click here for feedback or suggestions</a>
+                        <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">Send feedback ❤️</a>
                     </div>
                 </div>
             </div>
@@ -449,6 +581,27 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
 
     // Interaction Logic
     const tooltip = badge.querySelector('.mobbin-reliability-tooltip');
+
+    // Hover Logic with Delay
+    let hoverTimer;
+
+    const showTooltip = () => {
+        clearTimeout(hoverTimer);
+        tooltip.classList.add('visible');
+    };
+
+    const hideTooltip = () => {
+        hoverTimer = setTimeout(() => {
+            tooltip.classList.remove('visible');
+        }, 250);
+    };
+
+    badge.addEventListener('mouseenter', showTooltip);
+    badge.addEventListener('mouseleave', hideTooltip);
+    // Ensure tooltip stays open if hovered directly (handling gaps/re-entry)
+    tooltip.addEventListener('mouseenter', showTooltip);
+    tooltip.addEventListener('mouseleave', hideTooltip);
+
     const closeBtn = badge.querySelector('.close-btn');
     const toggleBtn = badge.querySelector('.accordion-toggle');
     const accordionContent = badge.querySelector('.accordion-content');
