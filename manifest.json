@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Mobbin Reliability Score",
   "version": "1.0",
-  "description": "Adds a proven product track record reliability score to design screens on Mobbin.",
+  "description": "nstantly see which Mobbin apps are worth using as product inspiration.",
   "permissions": [
     "activeTab",
     "scripting",
