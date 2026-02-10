@@ -517,66 +517,70 @@ async function injectMiniBadge(card, appUrl, appName, genre = null, tagline = nu
     const adoptionLabel = getAdoptionLabel(scoreCard.dScore);
     const growthLabel = getGrowthLabel(scoreCard.gScore);
 
+    const isInactive = !data;
+    const badgeContent = isInactive
+        ? `<div class="score-dot mobbin-content-fade" style="background: #bababaff;"></div><span class="mobbin-content-fade" style="font-size: 12px; font-weight: 600; line-height: 2; color: #6e6e73;">Inactive</span>`
+        : `<div class="score-dot mobbin-content-fade" style="background: ${color};"></div><span class="mobbin-content-fade" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">${formatReliabilityScore(scoreCard.score)}</span>`;
+
     badge.innerHTML = `
-        <div class="score-dot mobbin-content-fade" style="background: ${color};"></div>
-        <span class="mobbin-content-fade" style="font-size: 16px; font-weight: 600; color: #1d1d1f;">${formatReliabilityScore(scoreCard.score)}</span>
-        
-        <div class="mobbin-reliability-tooltip">
-            <div class="tooltip-header-row">
-                <span>${appName} Reliability Score</span>
-                <span class="close-btn">&times;</span>
+        ${badgeContent}
+
+    <div class="mobbin-reliability-tooltip">
+        <div class="tooltip-header-row">
+            <span>${appName} Reliability Score</span>
+            <span class="close-btn">&times;</span>
+        </div>
+
+        <div class="score-row">
+            <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
+            <span class="total-score">/10</span>
+            <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
+        </div>
+
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <span class="metric-label">Adoption:</span>
+                <span class="metric-value">${adoptionLabel}</span>
             </div>
-            
-            <div class="score-row">
-                <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
-                <span class="total-score">/10</span>
-                <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
+            <div class="metric-item">
+                <span class="metric-label">Growth:</span>
+                <span class="metric-value">${growthLabel}</span>
             </div>
-            
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
-            </div>
-            
-            <div class="metrics-grid">
-                <div class="metric-item">
-                    <span class="metric-label">Adoption:</span>
-                    <span class="metric-value">${adoptionLabel}</span>
+        </div>
+
+        <div class="accordion-toggle">
+            <span class="accordion-text">See more</span>
+            <svg class="accordion-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+        </div>
+
+        <div class="accordion-content">
+            <div class="footer-row">
+                <div class="footer-title">How is the score calculated?</div>
+                <div class="footer-text">
+                    It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
                 </div>
-                <div class="metric-item">
-                    <span class="metric-label">Growth:</span>
-                    <span class="metric-value">${growthLabel}</span>
-                </div>
-            </div>
-            
-            <div class="accordion-toggle">
-                <span class="accordion-text">See more</span>
-                <svg class="accordion-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
             </div>
 
-            <div class="accordion-content">
-                <div class="footer-row">
-                    <div class="footer-title">How is the score calculated?</div>
-                    <div class="footer-text">
-                        It’s based on <b>adoption</b> (how widely used the app is) and <b>growth</b> (whether usage is increasing over time), using public app-store data.
-                    </div>
-                </div>
-
-                <div class="blue-card">
-                    <div class="blue-card-header">
-                        <img src="${chrome.runtime.getURL('images/mrs_onLight.svg')}" alt="Mobbin Logo" class="blue-card-logo">
+            <div class="blue-card">
+                <div class="blue-card-header">
+                    <img src="${chrome.runtime.getURL('images/mrs_onLight.svg')}" alt="Mobbin Logo" class="blue-card-logo">
                         <span class="blue-card-title">Mobbin <span style="color: #0055FF;">Reliability</span> Score</span>
-                    </div>
-                    <div class="blue-card-desc">
-                        Built to quickly tell if an app is worth your time.
-                    </div>
-                    <div class="blue-card-footer">
-                        <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">Send feedback ❤️</a>
-                    </div>
+                </div>
+                <div class="blue-card-desc">
+                    Built to quickly tell if an app is worth your time.
+                </div>
+                <div class="blue-card-footer">
+                    <span class="megaphone">📣</span> Now in Beta! <a href="mailto:valentina.vf.ferretti@gmail.com" class="blue-card-email">Send feedback ❤️</a>
                 </div>
             </div>
         </div>
+    </div>
     `;
 
     // Interaction Logic
@@ -768,7 +772,7 @@ async function getMobbinGenre() {
                 const links = [...categoryRoot.querySelectorAll('a')];
                 const genre = links.map(a => a.textContent.trim()).filter(Boolean).join(', ');
                 if (genre) {
-                    console.log(`GENRE attempt ${i + 1}:`, genre);
+                    console.log(`GENRE attempt ${i + 1}: `, genre);
                     return genre;
                 }
             }
