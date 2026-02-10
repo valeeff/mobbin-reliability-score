@@ -19,7 +19,17 @@
     "service_worker": "background/service-worker.js"
   },
   "action": {
-    "default_popup": "popup/popup.html"
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "images/icons/icon/16.png",
+      "48": "images/icons/icon/48.png",
+      "128": "images/icons/icon/128.png"
+    }
+  },
+  "icons": {
+    "16": "images/icons/icon/16.png",
+    "48": "images/icons/icon/48.png",
+    "128": "images/icons/icon/128.png"
   },
   "content_scripts": [
     {
@@ -39,7 +49,10 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "images/mrs_onLight.svg"
+        "images/mrs_onLight.svg",
+        "images/icons/icon/16.png",
+        "images/icons/icon/48.png",
+        "images/icons/icon/128.png"
       ],
       "matches": [
         "<all_urls>"
