@@ -282,14 +282,44 @@ async function injectFullBadge(appName) {
     }
 
     // 5. UPDATE BADGE CONTENT
-    const color = getColor(scoreCard.grade);
+    // 5. UPDATE BADGE CONTENT
+    const isInactive = !data;
+    const color = isInactive ? '#BABABA' : getColor(scoreCard.grade); // Grey if inactive
     const gradient = getGradient(scoreCard.grade);
     const adoptionLabel = getAdoptionLabel(scoreCard.dScore);
     const growthLabel = getGrowthLabel(scoreCard.gScore);
 
-
-    badge.innerHTML = `
-        <div class="mobbin-content-fade" style="display: flex; align-items: center; gap: 8px;">
+    const badgeContent = isInactive
+        ? `
+            <div style="
+                background: ${color}; 
+                color: white; 
+                border-radius: 22px; 
+                padding: 0 12px;
+                min-width: 32px; 
+                height: 32px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                font-weight: 700; 
+                font-size: 18px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                flex-shrink: 0;
+            ">
+            </div>
+            <div style="display: flex; flex-direction: column; justify-content: center;">
+                <div style="
+                    font-weight: 600; 
+                    font-size: 15px; 
+                    color: #1d1d1f; 
+                    letter-spacing: -0.01em; 
+                    line-height: 1.2;
+                ">
+                    Inactive App
+                </div>
+            </div>
+        `
+        : `
             <div style="
                 background: ${color}; 
                 color: white; 
@@ -318,6 +348,38 @@ async function injectFullBadge(appName) {
                     ${scoreCard.grade} Reliability
                 </div>
             </div>
+        `;
+
+    const tooltipMiddleContent = isInactive
+        ? `<div style="font-size: 11px; font-weight: 400; color: #1d1d1f; line-height: 1.6; margin-bottom: 12px;">
+             This app is no longer available on the App Store or Google Play, so a Reliability Score can’t be calculated.
+             <br>
+             Apps that are no longer available are often discontinued, acquired or rebranded.
+           </div>`
+        : `<div class="score-row">
+            <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
+            <span class="total-score">/10</span>
+            <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
+        </div>
+        
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-item">
+                <span class="metric-label">Adoption:</span>
+                <span class="metric-value">${adoptionLabel}</span>
+            </div>
+            <div class="metric-item">
+                <span class="metric-label">Growth:</span>
+                <span class="metric-value">${growthLabel}</span>
+            </div>
+        </div>`;
+
+    badge.innerHTML = `
+        <div class="mobbin-content-fade" style="display: flex; align-items: center; gap: 8px;">
+            ${badgeContent}
         </div>
 
         <div class="mobbin-reliability-tooltip">
@@ -326,26 +388,7 @@ async function injectFullBadge(appName) {
                 <span class="close-btn">&times;</span>
             </div>
             
-            <div class="score-row">
-                <span class="big-score">${formatReliabilityScore(scoreCard.score)}</span>
-                <span class="total-score">/10</span>
-                <span class="grade-label" style="color: #1d1d1f; border: 1px solid ${color};">${scoreCard.grade} Reliability</span>
-            </div>
-            
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${Math.min(100, scoreCard.score * 10)}%; background: ${gradient};"></div>
-            </div>
-            
-            <div class="metrics-grid">
-                <div class="metric-item">
-                    <span class="metric-label">Adoption:</span>
-                    <span class="metric-value">${adoptionLabel}</span>
-                </div>
-                <div class="metric-item">
-                    <span class="metric-label">Growth:</span>
-                    <span class="metric-value">${growthLabel}</span>
-                </div>
-            </div>
+            ${tooltipMiddleContent}
             
             <div class="accordion-toggle">
                 <span class="accordion-text">See more</span>
