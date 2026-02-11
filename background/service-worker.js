@@ -741,7 +741,7 @@ const STOREFRONTS = [
     'us', 'gb', 'ca', 'au',       // Tier 1 (English)
     'de', 'fr',                   // Tier 2 (Europe)
     'in', 'pk',                   // Tier 2 (Asia - massive volume)
-    'jp', 'kr', 'cn'               // Tier 1 (Asia - High value)
+    'jp', 'kr', 'cn'              // Tier 1 (Asia - High value)
 ];
 
 const MAX_STOREFRONTS = 15;

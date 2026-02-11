@@ -46,8 +46,8 @@ function formatReliabilityScore(score) {
 
 function getColor(grade) {
     const colorMap = {
-        'Elite': '#00c261ff', // Green
-        'High': '#79e300ff', // Light Green / Lime
+        'Elite': '#00a552ff', // Green  
+        'High': '#74da00ff', // Light Green / Lime
         'Medium': '#FFCC00', // Amber
         'Low': '#ff4343ff' // Red
     };
@@ -55,8 +55,8 @@ function getColor(grade) {
 }
 function getGradient(grade) {
     const gradientMap = {
-        'Elite': 'linear-gradient(90deg, #00c261ff 0%, #3aff9aff 100%)',
-        'High': 'linear-gradient(90deg, #79e300ff 0%, #a7ff3cff 100%)',
+        'Elite': 'linear-gradient(90deg, #00a552ff 0%, #3aff9aff 100%)',
+        'High': 'linear-gradient(90deg, #74da00ff 0%, #a7ff3cff 100%)',
         'Medium': 'linear-gradient(90deg, #FFCC00 0%, #ffe100ff 100%)',
         'Low': 'linear-gradient(90deg, #FF4444 0%, #f91f1fff 100%)'
     };
