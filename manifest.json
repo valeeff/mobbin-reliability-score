@@ -5,7 +5,6 @@
   "description": "Instantly see which Mobbin apps are worth using as product inspiration.",
   "permissions": [
     "activeTab",
-    "scripting",
     "storage",
     "webNavigation"
   ],
