@@ -17,3 +17,10 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Test Data & Secrets
+tests/
+*.html
+
+# System Files
+.DS_Store
