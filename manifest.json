@@ -4,7 +4,6 @@
   "version": "1.0",
   "description": "Instantly see which Mobbin apps are worth using as product inspiration.",
   "permissions": [
-    "activeTab",
     "storage",
     "webNavigation"
   ],
